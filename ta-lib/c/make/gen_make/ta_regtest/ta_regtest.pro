@@ -18,6 +18,7 @@ DESTDIR     = ../../../../../bin
 # Files to process
 SOURCES	= ../../../../../src/tools/ta_regtest/ta_regtest.c \
           ../../../../../src/tools/ta_regtest/test_ascii.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_adx.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_bbands.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_ma.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_macd.c \
@@ -30,6 +31,7 @@ SOURCES	= ../../../../../src/tools/ta_regtest/ta_regtest.c \
           ../../../../../src/tools/ta_regtest/test_pm.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_po.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_rsi.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_sar.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_stddev.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_stoch.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_trange.c \

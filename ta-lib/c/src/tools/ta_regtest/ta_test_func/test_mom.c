@@ -293,7 +293,7 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
       *lookback = TA_ROCR_Lookback(testParam->test->optInTimePeriod_0 );
    }
    else
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(130);
 
    return retCode;
 }
@@ -423,7 +423,7 @@ static ErrorNumber do_test( TA_Libc *libHandle,
       errNb = doRangeTest( libHandle,
                            rangeTestFunction, 
                            TA_FUNC_UNST_NONE,
-                           (void *)&testParam, 1 );
+                           (void *)&testParam, 1, 0 );
       if( errNb != TA_TEST_PASS )
          return errNb;
    }

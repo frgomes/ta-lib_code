@@ -1,3 +1,9 @@
+V0.0.6 (October 2002)
+  - Add TA Functions: SAR,ADX,ADXR,DX,+DI,-DI,+DM,-DM
+  - Add many european Yahoo! data source.
+  - Fix#609753 for Yahoo! data source.
+  - STDDEV,VAR,BBANDS speed optimization
+
 V0.0.5 (June 2002)
   - Add performance measurement infrastructure.
   - Add TA function: OBV

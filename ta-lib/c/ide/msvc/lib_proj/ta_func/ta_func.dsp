@@ -22,6 +22,7 @@ CFG=ta_func - Win32 CSD Single Thread Debug
 !MESSAGE "ta_func - Win32 CSD Single Thread Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE "ta_func - Win32 CSR Single Thread Release" (based on "Win32 (x86) Static Library")
 !MESSAGE "ta_func - Win32 CMR Multithread Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "ta_func - Win32 Profiling" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
@@ -156,6 +157,31 @@ LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_func_cmr.lib"
 # ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_func_cmr.lib"
 
+!ELSEIF  "$(CFG)" == "ta_func - Win32 Profiling"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "ta_func___Win32_Profiling"
+# PROP BASE Intermediate_Dir "ta_func___Win32_Profiling"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "ta_func___Win32_Profiling"
+# PROP Intermediate_Dir "ta_func___Win32_Profiling"
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /O2 /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /D "_LIB" /D "TA_SINGLE_THREAD" /D "WIN32" /D "NDEBUG" /D "_MBCS" /YX /FD /c
+# SUBTRACT BASE CPP /Fr
+# ADD CPP /nologo /W3 /O2 /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /D "_LIB" /D "TA_SINGLE_THREAD" /D "WIN32" /D "NDEBUG" /D "_MBCS" /YX /FD /c
+# SUBTRACT CPP /Fr
+# ADD BASE RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LIB32=link.exe -lib
+# ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_func_csr.lib"
+# ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_func_csr.lib"
+
 !ENDIF 
 
 # Begin Target
@@ -165,9 +191,18 @@ LIB32=link.exe -lib
 # Name "ta_func - Win32 CSD Single Thread Debug"
 # Name "ta_func - Win32 CSR Single Thread Release"
 # Name "ta_func - Win32 CMR Multithread Release"
+# Name "ta_func - Win32 Profiling"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Source File
+
+SOURCE=..\..\..\..\src\ta_func\ta_ADX.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\src\ta_func\ta_ADXR.c
+# End Source File
 # Begin Source File
 
 SOURCE=..\..\..\..\src\ta_func\ta_APO.c
@@ -187,6 +222,10 @@ SOURCE=..\..\..\..\src\ta_func\ta_CCI.c
 # Begin Source File
 
 SOURCE=..\..\..\..\src\ta_func\ta_DEMA.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\src\ta_func\ta_DX.c
 # End Source File
 # Begin Source File
 
@@ -218,11 +257,27 @@ SOURCE=..\..\..\..\src\ta_func\ta_MIN.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\src\ta_func\ta_MINUS_DI.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\src\ta_func\ta_MINUS_DM.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\src\ta_func\ta_MOM.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\..\..\src\ta_func\ta_OBV.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\src\ta_func\ta_PLUS_DI.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\src\ta_func\ta_PLUS_DM.c
 # End Source File
 # Begin Source File
 

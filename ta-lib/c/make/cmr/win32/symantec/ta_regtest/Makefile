@@ -24,6 +24,7 @@ ZIP	=	zip -r -9
 HEADERS =	
 SOURCES =	..\..\..\..\..\src\tools\ta_regtest\ta_regtest.c \
 		..\..\..\..\..\src\tools\ta_regtest\test_ascii.c \
+		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_adx.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_bbands.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_ma.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_macd.c \
@@ -36,6 +37,7 @@ SOURCES =	..\..\..\..\..\src\tools\ta_regtest\ta_regtest.c \
 		..\..\..\..\..\src\tools\ta_regtest\test_pm.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_po.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_rsi.c \
+		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_sar.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_stddev.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_stoch.c \
 		..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_trange.c \
@@ -43,6 +45,7 @@ SOURCES =	..\..\..\..\..\src\tools\ta_regtest\ta_regtest.c \
 		..\..\..\..\..\src\tools\ta_regtest\test_yahoo.c
 OBJECTS =	..\..\..\..\..\temp\cmr\ta_regtest.obj \
 		..\..\..\..\..\temp\cmr\test_ascii.obj \
+		..\..\..\..\..\temp\cmr\test_adx.obj \
 		..\..\..\..\..\temp\cmr\test_bbands.obj \
 		..\..\..\..\..\temp\cmr\test_ma.obj \
 		..\..\..\..\..\temp\cmr\test_macd.obj \
@@ -55,6 +58,7 @@ OBJECTS =	..\..\..\..\..\temp\cmr\ta_regtest.obj \
 		..\..\..\..\..\temp\cmr\test_pm.obj \
 		..\..\..\..\..\temp\cmr\test_po.obj \
 		..\..\..\..\..\temp\cmr\test_rsi.obj \
+		..\..\..\..\..\temp\cmr\test_sar.obj \
 		..\..\..\..\..\temp\cmr\test_stddev.obj \
 		..\..\..\..\..\temp\cmr\test_stoch.obj \
 		..\..\..\..\..\temp\cmr\test_trange.obj \
@@ -101,6 +105,7 @@ dist:
 clean:
 	-del ..\..\..\..\..\temp\cmr\ta_regtest.obj
 	-del ..\..\..\..\..\temp\cmr\test_ascii.obj
+	-del ..\..\..\..\..\temp\cmr\test_adx.obj
 	-del ..\..\..\..\..\temp\cmr\test_bbands.obj
 	-del ..\..\..\..\..\temp\cmr\test_ma.obj
 	-del ..\..\..\..\..\temp\cmr\test_macd.obj
@@ -113,6 +118,7 @@ clean:
 	-del ..\..\..\..\..\temp\cmr\test_pm.obj
 	-del ..\..\..\..\..\temp\cmr\test_po.obj
 	-del ..\..\..\..\..\temp\cmr\test_rsi.obj
+	-del ..\..\..\..\..\temp\cmr\test_sar.obj
 	-del ..\..\..\..\..\temp\cmr\test_stddev.obj
 	-del ..\..\..\..\..\temp\cmr\test_stoch.obj
 	-del ..\..\..\..\..\temp\cmr\test_trange.obj
@@ -139,6 +145,9 @@ clean:
 
 ..\..\..\..\..\temp\cmr\test_ascii.obj: ..\..\..\..\..\src\tools\ta_regtest\test_ascii.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o..\..\..\..\..\temp\cmr\test_ascii.obj ..\..\..\..\..\src\tools\ta_regtest\test_ascii.c
+
+..\..\..\..\..\temp\cmr\test_adx.obj: ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_adx.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o..\..\..\..\..\temp\cmr\test_adx.obj ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_adx.c
 
 ..\..\..\..\..\temp\cmr\test_bbands.obj: ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_bbands.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o..\..\..\..\..\temp\cmr\test_bbands.obj ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_bbands.c
@@ -175,6 +184,9 @@ clean:
 
 ..\..\..\..\..\temp\cmr\test_rsi.obj: ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_rsi.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o..\..\..\..\..\temp\cmr\test_rsi.obj ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_rsi.c
+
+..\..\..\..\..\temp\cmr\test_sar.obj: ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_sar.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o..\..\..\..\..\temp\cmr\test_sar.obj ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_sar.c
 
 ..\..\..\..\..\temp\cmr\test_stddev.obj: ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_stddev.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o..\..\..\..\..\temp\cmr\test_stddev.obj ..\..\..\..\..\src\tools\ta_regtest\ta_test_func\test_stddev.c

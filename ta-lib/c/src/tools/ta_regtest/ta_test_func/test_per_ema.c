@@ -195,7 +195,7 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
                          outputBuffer );
       *lookback = TA_TRIX_Lookback( testParam->test->optInTimePeriod_0 );
    default:
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(131);
    } 
 
    return retCode;
@@ -300,7 +300,7 @@ static ErrorNumber do_test_per_ema( TA_Libc *libHandle,
       errNb = doRangeTest( libHandle,
                            rangeTestFunction, 
                            TA_FUNC_UNST_EMA,
-                           (void *)&testParam, 1 );
+                           (void *)&testParam, 1, 0 );
       if( errNb != TA_TEST_PASS )
          return errNb;
    }

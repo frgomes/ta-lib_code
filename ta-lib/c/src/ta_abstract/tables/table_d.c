@@ -50,6 +50,32 @@ DEF_FUNCTION( DEMA,                       /* name */
              );
 /* DEMA END */
 
+/* DX BEGIN */
+static const TA_InputParameterInfo    *TA_DX_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_HLC,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_DX_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_DX_OptInputs[] =
+{ &TA_DEF_UI_TimePeriod_14,
+  NULL
+};
+
+DEF_FUNCTION( DX,                           /* name */
+              TA_GroupId_TrendIndicators,   /* groupId */
+              "Directional Movement Index", /* hint */
+              NULL,                         /* helpFile */
+              TA_FUNC_FLG_UNST_PER,         /* flags */
+              NULL                          /* analysis function */
+             );
+/* DX END */
 
 /****************************************************************************
  * Step 3 - Add your TA function to the table.
@@ -58,6 +84,7 @@ DEF_FUNCTION( DEMA,                       /* name */
 const TA_FuncDef *TA_DEF_TableD[] =
 {
    ADD_TO_TABLE(DEMA),
+   ADD_TO_TABLE(DX),
    NULL
 };
 
