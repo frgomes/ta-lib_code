@@ -60,8 +60,8 @@
    #include "ta_utility.h"
 #endif
 
-int TA_MACDFIX_Lookback( TA_Integer    optInSignalPeriod_0, /* From 1 to TA_INTEGER_MAX */
-                         TA_Integer    optInCompatibility_1 ) 
+int TA_MACDFIX_Lookback( TA_Integer    optInSignalPeriod_0 )  /* From 1 to TA_INTEGER_MAX */
+
 /**** END GENCODE SECTION 1 - DO NOT DELETE THIS LINE ****/
 {
    /* insert lookback code here. */
@@ -71,8 +71,8 @@ int TA_MACDFIX_Lookback( TA_Integer    optInSignalPeriod_0, /* From 1 to TA_INTE
     * (must also account for the initial data consume 
     *  by the fix 26 period EMA).
     */
-   return   TA_EMA_Lookback( 26, optInCompatibility_1 )
-          + TA_EMA_Lookback( optInSignalPeriod_0, optInCompatibility_1 );
+   return   TA_EMA_Lookback( 26 )
+          + TA_EMA_Lookback( optInSignalPeriod_0 );
 }
 
 /**** START GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
@@ -87,30 +87,23 @@ int TA_MACDFIX_Lookback( TA_Integer    optInSignalPeriod_0, /* From 1 to TA_INTE
  * optInSignalPeriod_0:(From 1 to TA_INTEGER_MAX)
  *    Smoothing for the signal line (nb of period)
  * 
- * optInCompatibility_1:
- *    Make function compatible to some software
- * 
  * 
  */
 
-TA_RetCode TA_MACDFIX( TA_Libc      *libHandle,
-                       TA_Integer    startIdx,
+TA_RetCode TA_MACDFIX( TA_Integer    startIdx,
                        TA_Integer    endIdx,
                        const TA_Real inReal_0[],
                        TA_Integer    optInSignalPeriod_0, /* From 1 to TA_INTEGER_MAX */
-                       TA_Integer    optInCompatibility_1,
                        TA_Integer   *outBegIdx,
                        TA_Integer   *outNbElement,
-                       TA_Real       outRealMACD_0[],
-                       TA_Real       outRealMACDSignal_1[],
-                       TA_Real       outRealMACDHist_2[] )
+                       TA_Real       outMACD_0[],
+                       TA_Real       outMACDSignal_1[],
+                       TA_Real       outMACDHist_2[] )
 /**** END GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
 {
    /* Insert local variables here. */
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
-
-   (void)libHandle; /* Get ride of warning if unused. */
 
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
@@ -123,23 +116,18 @@ TA_RetCode TA_MACDFIX( TA_Libc      *libHandle,
    /* Validate the parameters. */
    if( !inReal_0 ) return TA_BAD_PARAM;
    /* min/max are checked for optInSignalPeriod_0. */
-   if( optInSignalPeriod_0 == TA_INTEGER_DEFAULT )
+   if( (TA_Integer)optInSignalPeriod_0 == TA_INTEGER_DEFAULT )
       optInSignalPeriod_0 = 9;
-   else if( (optInSignalPeriod_0 < 1) || (optInSignalPeriod_0 > 2147483647) )
+   else if( ((TA_Integer)optInSignalPeriod_0 < 1) || ((TA_Integer)optInSignalPeriod_0 > 2147483647) )
       return TA_BAD_PARAM;
 
-   if( optInCompatibility_1 == TA_INTEGER_DEFAULT )
-      optInCompatibility_1 = 0;
-   else if( (optInCompatibility_1 < 0) || (optInCompatibility_1 > 1) )
+   if( outMACD_0 == NULL )
       return TA_BAD_PARAM;
 
-   if( outRealMACD_0 == NULL )
+   if( outMACDSignal_1 == NULL )
       return TA_BAD_PARAM;
 
-   if( outRealMACDSignal_1 == NULL )
-      return TA_BAD_PARAM;
-
-   if( outRealMACDHist_2 == NULL )
+   if( outMACDHist_2 == NULL )
       return TA_BAD_PARAM;
 
 #endif /* TA_FUNC_NO_RANGE_CHECK */
@@ -148,17 +136,15 @@ TA_RetCode TA_MACDFIX( TA_Libc      *libHandle,
 
    /* Insert TA function code here. */
 
-   return TA_INT_MACD( libHandle,
-                       startIdx, endIdx,                       
+   return TA_INT_MACD( startIdx, endIdx,                       
                        inReal_0,
                        0, /* 0 indicate fix 12 == 0.15  for optInFastPeriod_0 */
                        0, /* 0 indicate fix 26 == 0.075 for optInSlowPeriod_1 */
                        optInSignalPeriod_0,
-                       optInCompatibility_1,
                        outBegIdx,
                        outNbElement,
-                       outRealMACD_0,
-                       outRealMACDSignal_1,
-                       outRealMACDHist_2 );
+                       outMACD_0,
+                       outMACDSignal_1,
+                       outMACDHist_2 );
 }
 

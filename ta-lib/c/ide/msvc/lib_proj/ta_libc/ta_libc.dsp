@@ -4,7 +4,7 @@
 
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
 
-CFG=ta_libc - Win32 CSD Single Thread Debug
+CFG=ta_libc - Win32 CDR Multithread DLL Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,7 +13,7 @@ CFG=ta_libc - Win32 CSD Single Thread Debug
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "ta_libc.mak" CFG="ta_libc - Win32 CSD Single Thread Debug"
+!MESSAGE NMAKE /f "ta_libc.mak" CFG="ta_libc - Win32 CDR Multithread DLL Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
@@ -22,6 +22,7 @@ CFG=ta_libc - Win32 CSD Single Thread Debug
 !MESSAGE "ta_libc - Win32 CSD Single Thread Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE "ta_libc - Win32 CSR Single Thread Release" (based on "Win32 (x86) Static Library")
 !MESSAGE "ta_libc - Win32 CMR Multithread Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "ta_libc - Win32 Profiling" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
@@ -67,7 +68,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "..\..\..\..\temp\cmd\ta_libc"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /Zi /Od /D "_LIB" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "TA_DEBUG" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /Zi /Od /D "_LIB" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "TA_DEBUG" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /Zi /Od /D "_LIB" /D "TA_DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "TA_FUNC_NO_RANGE_CHECK" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -146,6 +147,29 @@ LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_libc_cmr.lib"
 # ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_libc_cmr.lib"
 
+!ELSEIF  "$(CFG)" == "ta_libc - Win32 Profiling"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "ta_libc___Win32_Profiling"
+# PROP BASE Intermediate_Dir "ta_libc___Win32_Profiling"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "ta_libc___Win32_Profiling"
+# PROP Intermediate_Dir "ta_libc___Win32_Profiling"
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /O2 /D "_LIB" /D "TA_SINGLE_THREAD" /D "WIN32" /D "NDEBUG" /D "_MBCS" /YX /FD /c
+# ADD CPP /nologo /W3 /O2 /D "_LIB" /D "TA_SINGLE_THREAD" /D "WIN32" /D "NDEBUG" /D "_MBCS" /YX /FD /c
+# ADD BASE RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LIB32=link.exe -lib
+# ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_libc_csr.lib"
+# ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_libc_csr.lib"
+
 !ENDIF 
 
 # Begin Target
@@ -155,6 +179,7 @@ LIB32=link.exe -lib
 # Name "ta_libc - Win32 CSD Single Thread Debug"
 # Name "ta_libc - Win32 CSR Single Thread Release"
 # Name "ta_libc - Win32 CMR Multithread Release"
+# Name "ta_libc - Win32 Profiling"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"

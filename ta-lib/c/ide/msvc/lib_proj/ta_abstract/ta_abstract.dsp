@@ -4,7 +4,7 @@
 
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
 
-CFG=ta_abstract - Win32 CSD Single Thread Debug
+CFG=ta_abstract - Win32 DLL Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,7 +13,7 @@ CFG=ta_abstract - Win32 CSD Single Thread Debug
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "ta_abstract.mak" CFG="ta_abstract - Win32 CSD Single Thread Debug"
+!MESSAGE NMAKE /f "ta_abstract.mak" CFG="ta_abstract - Win32 DLL Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
@@ -22,6 +22,8 @@ CFG=ta_abstract - Win32 CSD Single Thread Debug
 !MESSAGE "ta_abstract - Win32 CSD Single Thread Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE "ta_abstract - Win32 CSR Single Thread Release" (based on "Win32 (x86) Static Library")
 !MESSAGE "ta_abstract - Win32 CMR Multithread Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "ta_abstract - Win32 Profiling" (based on "Win32 (x86) Static Library")
+!MESSAGE "ta_abstract - Win32 DLL Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
@@ -70,7 +72,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /Zi /Od /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /YX /FD /GZ /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MTd /W3 /Gm /Zi /Od /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /Zi /Od /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "TA_FUNC_NO_RANGE_CHECK" /YX /FD /GZ /c
 # SUBTRACT CPP /Fr
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -156,6 +158,56 @@ LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_abstract_cmr.lib"
 # ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_abstract_cmr.lib"
 
+!ELSEIF  "$(CFG)" == "ta_abstract - Win32 Profiling"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "ta_abstract___Win32_Profiling"
+# PROP BASE Intermediate_Dir "ta_abstract___Win32_Profiling"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "ta_abstract___Win32_Profiling"
+# PROP Intermediate_Dir "ta_abstract___Win32_Profiling"
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /O2 /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_SINGLE_THREAD" /D "WIN32" /D "NDEBUG" /D "_MBCS" /YX /FD /c
+# SUBTRACT BASE CPP /Fr
+# ADD CPP /nologo /W3 /O2 /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_SINGLE_THREAD" /D "WIN32" /D "NDEBUG" /D "_MBCS" /YX /FD /c
+# SUBTRACT CPP /Fr
+# ADD BASE RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LIB32=link.exe -lib
+# ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_abstract_csr.lib"
+# ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_abstract_csr.lib"
+
+!ELSEIF  "$(CFG)" == "ta_abstract - Win32 DLL Debug"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "ta_abstract___Win32_DLL_Debug"
+# PROP BASE Intermediate_Dir "ta_abstract___Win32_DLL_Debug"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "ta_abstract___Win32_DLL_Debug"
+# PROP Intermediate_Dir "ta_abstract___Win32_DLL_Debug"
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MTd /W3 /Gm /Zi /Od /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "TA_FUNC_NO_RANGE_CHECK" /YX /FD /GZ /c
+# SUBTRACT BASE CPP /Fr
+# ADD CPP /nologo /MDd /W3 /Gm /Zi /Od /I "..\..\..\..\include" /I "..\..\..\..\src\ta_common" /I "..\..\..\..\src\ta_abstract\frames" /I "..\..\..\..\src\ta_abstract" /D "_LIB" /D "TA_DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "TA_FUNC_NO_RANGE_CHECK" /YX /FD /GZ /c
+# SUBTRACT CPP /Fr
+# ADD BASE RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LIB32=link.exe -lib
+# ADD BASE LIB32 /nologo /out:"..\..\..\..\lib\ta_abstract_cmd.lib"
+# ADD LIB32 /nologo /out:"..\..\..\..\lib\ta_abstract_for_dll_debug.lib"
+
 !ENDIF 
 
 # Begin Target
@@ -165,6 +217,8 @@ LIB32=link.exe -lib
 # Name "ta_abstract - Win32 CSD Single Thread Debug"
 # Name "ta_abstract - Win32 CSR Single Thread Release"
 # Name "ta_abstract - Win32 CMR Multithread Release"
+# Name "ta_abstract - Win32 Profiling"
+# Name "ta_abstract - Win32 DLL Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -174,127 +228,15 @@ SOURCE=..\..\..\..\src\ta_abstract\ta_abstract.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_APO_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_ATR_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_BBANDS_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_CCI_frame.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\..\..\src\ta_abstract\ta_def_ui.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_DEMA_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_EMA_frame.c
+SOURCE=..\..\..\..\src\ta_abstract\frames\ta_frame.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\..\..\src\ta_abstract\ta_group_idx.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MA_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MACD_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MACDFIX_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MAX_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MEDPRICE_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MIN_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_MOM_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_OBV_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_PPO_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_ROC_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_ROCR_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_RSI_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_SAR_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_SMA_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_STDDEV_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_STOCH_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_TEMA_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_TRANGE_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_TRIX_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_TYPPRICE_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_VAR_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_WCLPRICE_frame.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\ta_abstract\frames\ta_WMA_frame.c
 # End Source File
 # Begin Source File
 

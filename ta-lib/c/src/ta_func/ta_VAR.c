@@ -36,14 +36,14 @@
  *  Initial  Name/description
  *  -------------------------------------------------------------------
  *  MF       Mario Fortier
- *
+ *  JV       Jesus Viver <324122@cienz.unizar.es>
  *
  * Change history:
  *
  *  MMDDYY BY   Description
  *  -------------------------------------------------------------------
  *  112400 MF   Template creation.
- *
+ *  100502 JV   Speed optimization of the algorithm
  */
 
 /**** START GENCODE SECTION 1 - DO NOT DELETE THIS LINE ****/
@@ -89,8 +89,7 @@ int TA_VAR_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MA
  * 
  */
 
-TA_RetCode TA_VAR( TA_Libc      *libHandle,
-                   TA_Integer    startIdx,
+TA_RetCode TA_VAR( TA_Integer    startIdx,
                    TA_Integer    endIdx,
                    const TA_Real inReal_0[],
                    TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
@@ -104,8 +103,6 @@ TA_RetCode TA_VAR( TA_Libc      *libHandle,
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
 
-   (void)libHandle; /* Get ride of warning if unused. */
-
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
    /* Validate the requested output range. */
@@ -117,9 +114,9 @@ TA_RetCode TA_VAR( TA_Libc      *libHandle,
    /* Validate the parameters. */
    if( !inReal_0 ) return TA_BAD_PARAM;
    /* min/max are checked for optInTimePeriod_0. */
-   if( optInTimePeriod_0 == TA_INTEGER_DEFAULT )
+   if( (TA_Integer)optInTimePeriod_0 == TA_INTEGER_DEFAULT )
       optInTimePeriod_0 = 5;
-   else if( (optInTimePeriod_0 < 1) || (optInTimePeriod_0 > 2147483647) )
+   else if( ((TA_Integer)optInTimePeriod_0 < 1) || ((TA_Integer)optInTimePeriod_0 > 2147483647) )
       return TA_BAD_PARAM;
 
    if( optInNbDev_1 == TA_REAL_DEFAULT )
@@ -152,8 +149,8 @@ TA_RetCode TA_INT_VAR( TA_Integer    startIdx,
                        TA_Integer   *outNbElement,
                        TA_Real      *outReal_0 )
 {
-   TA_Real periodTotal, tempReal, meanValue, devSum;
-   int i, j, outIdx, trailingIdx, nbInitialElementNeeded;
+   TA_Real tempReal, periodTotal1, periodTotal2, meanValue1, meanValue2;
+   int i, outIdx, trailingIdx, nbInitialElementNeeded;
 
    /* Validate the calculation method type and
     * identify the minimum number of price bar needed
@@ -176,15 +173,20 @@ TA_RetCode TA_INT_VAR( TA_Integer    startIdx,
    }
 
    /* Do the MA calculation using tight loops. */
-   /* Add-up the initial period, except for the last value. */
-   periodTotal = 0;
+   /* Add-up the initial periods, except for the last value. */
+   periodTotal1 = 0;
+   periodTotal2 = 0;
    trailingIdx = startIdx-nbInitialElementNeeded;
-   
+
    i=trailingIdx;
    if( optInTimePeriod_0 > 1 )
    {
-      while( i < startIdx )
-         periodTotal += inReal_0[i++];
+      while( i < startIdx ) {
+         tempReal = inReal_0[i++];
+         periodTotal1 += tempReal;
+         tempReal *= tempReal;
+         periodTotal2 += tempReal;
+      }
    }
 
    /* Proceed with the calculation for the requested range.
@@ -194,31 +196,34 @@ TA_RetCode TA_INT_VAR( TA_Integer    startIdx,
    outIdx = 0;
    do
    {
-      periodTotal += inReal_0[i++];
-      tempReal = periodTotal;
-      periodTotal -= inReal_0[trailingIdx++];
-      meanValue = tempReal / optInTimePeriod_0;
+      tempReal = inReal_0[i++];
+
+      /* Square and add all the deviation over
+       * the same periods.
+       */
+
+      periodTotal1 += tempReal;
+      tempReal *= tempReal;
+      periodTotal2 += tempReal;
 
       /* Square and add all the deviation over
        * the same period.
        */
-      devSum = 0;
-      for( j=i-optInTimePeriod_0; j < i; j++ )
-      {
-         tempReal  = inReal_0[j]-meanValue;
-         tempReal *= tempReal;
-         devSum   += tempReal;
-      }
 
-      /* Dividing the sum of deviation by the period
-       * gives the variance.
-       */
-      outReal_0[outIdx++] = devSum / optInTimePeriod_0;
+      meanValue1 = periodTotal1 / optInTimePeriod_0;
+      meanValue2 = periodTotal2 / optInTimePeriod_0;
+
+      tempReal = inReal_0[trailingIdx++];
+      periodTotal1 -= tempReal;
+      tempReal *= tempReal;
+      periodTotal2 -= tempReal;
+
+      outReal_0[outIdx++] = meanValue2-meanValue1*meanValue1;
    } while( i <= endIdx );
 
    /* All done. Indicate the output limits and return. */
    *outNbElement = outIdx;
-   *outBegIdx    = startIdx;
+   *outBegIdx = startIdx;
 
    return TA_SUCCESS;
 }

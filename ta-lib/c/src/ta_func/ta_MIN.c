@@ -36,14 +36,15 @@
  *  Initial  Name/description
  *  -------------------------------------------------------------------
  *  MF       Mario Fortier
- *
+ *  JV       Jesus Viver <324122@cienz.unizar.es>
  *
  * Change history:
  *
  *  MMDDYY BY   Description
  *  -------------------------------------------------------------------
  *  112400 MF   Template creation.
- *
+ *  101902 JV   Speed optimization of the algorithm
+ *  102202 MF   Speed optimize a bit further
  */
 
 /**** START GENCODE SECTION 1 - DO NOT DELETE THIS LINE ****/
@@ -60,7 +61,7 @@
    #include "ta_utility.h"
 #endif
 
-int TA_MIN_Lookback( TA_Integer    optInTimePeriod_0 )  /* From 1 to TA_INTEGER_MAX */
+int TA_MIN_Lookback( TA_Integer    optInTimePeriod_0 )  /* From 2 to TA_INTEGER_MAX */
 
 /**** END GENCODE SECTION 1 - DO NOT DELETE THIS LINE ****/
 {
@@ -78,17 +79,16 @@ int TA_MIN_Lookback( TA_Integer    optInTimePeriod_0 )  /* From 1 to TA_INTEGER_
  * 
  * Optional Parameters
  * -------------------
- * optInTimePeriod_0:(From 1 to TA_INTEGER_MAX)
+ * optInTimePeriod_0:(From 2 to TA_INTEGER_MAX)
  *    Number of period
  * 
  * 
  */
 
-TA_RetCode TA_MIN( TA_Libc      *libHandle,
-                   TA_Integer    startIdx,
+TA_RetCode TA_MIN( TA_Integer    startIdx,
                    TA_Integer    endIdx,
                    const TA_Real inReal_0[],
-                   TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
+                   TA_Integer    optInTimePeriod_0, /* From 2 to TA_INTEGER_MAX */
                    TA_Integer   *outBegIdx,
                    TA_Integer   *outNbElement,
                    TA_Real       outReal_0[] )
@@ -97,11 +97,9 @@ TA_RetCode TA_MIN( TA_Libc      *libHandle,
    /* Insert local variables here. */
    TA_Real lowest, tmp;
    TA_Integer outIdx, nbInitialElementNeeded;
-   TA_Integer trailingIdx, today, i;
+   TA_Integer trailingIdx, lowestIdx, today, i;
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
-
-   (void)libHandle; /* Get ride of warning if unused. */
 
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
@@ -114,9 +112,9 @@ TA_RetCode TA_MIN( TA_Libc      *libHandle,
    /* Validate the parameters. */
    if( !inReal_0 ) return TA_BAD_PARAM;
    /* min/max are checked for optInTimePeriod_0. */
-   if( optInTimePeriod_0 == TA_INTEGER_DEFAULT )
+   if( (TA_Integer)optInTimePeriod_0 == TA_INTEGER_DEFAULT )
       optInTimePeriod_0 = 30;
-   else if( (optInTimePeriod_0 < 1) || (optInTimePeriod_0 > 2147483647) )
+   else if( ((TA_Integer)optInTimePeriod_0 < 2) || ((TA_Integer)optInTimePeriod_0 > 2147483647) )
       return TA_BAD_PARAM;
 
    if( outReal_0 == NULL )
@@ -127,6 +125,7 @@ TA_RetCode TA_MIN( TA_Libc      *libHandle,
 /**** END GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
 
    /* Insert TA function code here. */
+
    /* Identify the minimum number of price bar needed
     * to identify at least one output over the specified
     * period.
@@ -154,18 +153,37 @@ TA_RetCode TA_MIN( TA_Libc      *libHandle,
    outIdx = 0;
    today       = startIdx;
    trailingIdx = startIdx-nbInitialElementNeeded;
+   lowestIdx   = -1;
+   lowest      = 0.0;
    
    while( today <= endIdx )
    {
-      lowest = inReal_0[trailingIdx++];
-      for( i=trailingIdx; i <= today; i++ )
+      tmp = inReal_0[today];
+
+      if( lowestIdx < trailingIdx )
       {
-         tmp = inReal_0[i];
-         if( tmp < lowest) lowest= tmp;
+        lowestIdx = trailingIdx;
+        lowest = inReal_0[lowestIdx];
+        i = lowestIdx;
+        while( ++i<=today )
+        {
+           tmp = inReal_0[i];
+           if( tmp < lowest )
+           {
+              lowestIdx = i;
+              lowest = tmp;
+           }
+        }
+      }
+      else if( tmp <= lowest )
+      {
+        lowestIdx = today;
+        lowest = tmp;
       }
 
       outReal_0[outIdx++] = lowest;
-      today++;
+      trailingIdx++;
+      today++;  
    }
 
    /* Keep the outBegIdx relative to the

@@ -82,7 +82,6 @@ typedef struct
 typedef struct
 {
    unsigned int magicNb;
-   TA_Libc *libHandle;
 
    TA_Real lastTrade;
    TA_Real bid;
@@ -102,8 +101,7 @@ typedef struct
    const char *type;
 } TA_YahooMarketPage;
 
-TA_RetCode TA_YahooMarketPageAlloc( TA_Libc *libHandle,
-                                    const TA_DecodingParam *marketDecodingParam,
+TA_RetCode TA_YahooMarketPageAlloc( const TA_DecodingParam *marketDecodingParam,
                                     const TA_String *categoryName,
                                     const TA_String *symbolName,
                                     TA_YahooMarketPage **allocatedMarketPage );
@@ -115,9 +113,16 @@ TA_RetCode TA_YahooMarketPageFree( TA_YahooMarketPage *quotePage );
  * On success, both strings must be freed with TA_StringFree.
  * On failure, no string are allocated.
  *
- * This function is not speed optimized and usage of it
- * shall be carefully considered. Some translation requires
- * further online investigation (fetching of webPage).
+ * When the Yahoo! symbol is a known extension, this call
+ * is quite fast, but in the case that there is no extension
+ * further online investigation is required (fetching of webPage).
+ *
+ * Because this online investigation can be quite costly,
+ * in terms of time, the parameter allowOnlineProcessing
+ * must be true for allowing such investigation. 
+ *
+ * In practice, only US symbols needs further investigation
+ * because many do not have an extension (by default I guess).
  *
  * On success, the allocated strings must be eventually freed
  * with TA_StringFree.
@@ -141,11 +146,12 @@ TA_RetCode TA_YahooMarketPageFree( TA_YahooMarketPage *quotePage );
  *
  * See "ta_yahoo_market.c"
  */
-TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
-                                        TA_DecodingParam *info,
+TA_RetCode TA_AllocStringFromYahooName( TA_DecodingParam *info,
                                         const char *yahooSymbol,
                                         TA_String **allocatedCategoryName,
-                                        TA_String **allocatedSymbolName );
+                                        TA_String **allocatedSymbolName,
+                                        unsigned int allowOnlineProcessing );
+
 
 /* Providing a Category and Symbol name, the Yahoo! Symbol is rebuild. 
  * TA_AllocStringFromLibName() is the complement of the function 
@@ -154,8 +160,7 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
  *
  * See "ta_yahoo_market.c"
  */
-TA_RetCode TA_AllocStringFromLibName( TA_Libc *libHandle,
-                                      const TA_String *category,
+TA_RetCode TA_AllocStringFromLibName( const TA_String *category,
                                       const TA_String *symbol,
                                       TA_String **allocatedYahooName );
 
@@ -163,8 +168,7 @@ TA_RetCode TA_AllocStringFromLibName( TA_Libc *libHandle,
  *
  * See "ta_yahoo_market.c"
  */
-TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
-                                         const TA_DecodingParam *info,
+TA_RetCode TA_WebPageAllocFromYahooName( const TA_DecodingParam *info,
                                          const char *yahooName,
                                          TA_WebPage **allocatedWebPage );
 
@@ -176,8 +180,7 @@ TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
  *
  * See "ta_yahoo_historical.c"
  */
-TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
-                                     TA_DataSourceHandle *handle,
+TA_RetCode TA_GetHistoryDataFromWeb( TA_DataSourceHandle *handle,
                                      TA_CategoryHandle   *categoryHandle,
                                      TA_SymbolHandle     *symbolHandle,
                                      TA_Period            period,

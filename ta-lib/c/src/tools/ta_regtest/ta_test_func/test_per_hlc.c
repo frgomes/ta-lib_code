@@ -77,7 +77,8 @@
 
 /**** Local declarations.              ****/
 typedef enum {
-TA_CCI_TEST
+TA_CCI_TEST,
+TA_WILLR_TEST,
 } TA_TestId;
 
 typedef struct
@@ -108,14 +109,27 @@ typedef struct
 } TA_RangeTestParam;
 
 /**** Local functions declarations.    ****/
-static ErrorNumber do_test( TA_Libc *libHandle,
-                            const TA_History *history,
+static ErrorNumber do_test( const TA_History *history,
                             const TA_Test *test );
 
 /**** Local variables definitions.     ****/
 
 static TA_Test tableTest[] =
 {
+   /****************/
+   /* WILLR TEST   */
+   /****************/
+   { 0, TA_WILLR_TEST, 13, 251, 14, TA_SUCCESS,   1,   -66.9903,  13,  252-13 }, /* First Value */
+   { 1, TA_WILLR_TEST,  0, 251, 14, TA_SUCCESS,   0,   -90.1943,  13,  252-13 },
+   { 0, TA_WILLR_TEST,  0, 251, 14, TA_SUCCESS, 112,        0.0,  13,  252-13 },
+
+   { 0, TA_WILLR_TEST,  24, 24, 14, TA_SUCCESS, 0,    -89.2857,  24,  1 },
+   { 0, TA_WILLR_TEST,  25, 25, 14, TA_SUCCESS, 0,    -97.2602,  25,  1 },
+   { 0, TA_WILLR_TEST,  26, 26, 14, TA_SUCCESS, 0,    -71.5482,  26,  1 },
+
+   { 0, TA_WILLR_TEST, 251, 251, 14, TA_SUCCESS,      0,    -59.1515, 251,  1 },
+   { 0, TA_WILLR_TEST,  14,  251, 14, TA_SUCCESS, 252-15,   -59.1515, 14,  252-14 },
+
    /****************/
    /*   CCI TEST  */
    /****************/
@@ -148,45 +162,46 @@ static TA_Test tableTest[] =
    { 0, TA_CCI_TEST, 0, 251, 11, TA_SUCCESS, 24,  113.4778681, 10,  252-10 },
    { 1, TA_CCI_TEST, 0, 251, 11, TA_SUCCESS, 252-11,  -169.65514, 10,  252-10 }, /* Last Value */
 
+
 };
 
 #define NB_TEST (sizeof(tableTest)/sizeof(TA_Test))
 
 /**** Global functions definitions.   ****/
-ErrorNumber test_func_per_hlc( TA_Libc *libHandle, TA_History *history )
+ErrorNumber test_func_per_hlc( TA_History *history )
 {
    unsigned int i;
    ErrorNumber retValue;
 
    /* Re-initialize all the unstable period to zero. */
-   TA_SetUnstablePeriod( libHandle, TA_FUNC_UNST_ALL, 0 );
+   TA_SetUnstablePeriod( TA_FUNC_UNST_ALL, 0 );
 
    for( i=0; i < NB_TEST; i++ )
    {
       if( (int)tableTest[i].expectedNbElement > (int)history->nbBars )
       {
-         printf( "TA_MA Failed Bad Parameter for Test #%d (%d,%d)\n",
+         printf( "Failed Bad Parameter for Test #%d (%d,%d)\n",
                  i, tableTest[i].expectedNbElement, history->nbBars );
          return TA_TESTUTIL_TFRR_BAD_PARAM;
       }
 
-      retValue = do_test( libHandle, history, &tableTest[i] );
+      retValue = do_test( history, &tableTest[i] );
       if( retValue != 0 )
       {
-         printf( "TA_MA Failed Test #%d (Code=%d)\n", i, retValue );
+         printf( "Failed Test #%d (Code=%d)\n", i, retValue );
          return retValue;
       }
    }
 
    /* Re-initialize all the unstable period to zero. */
-   TA_SetUnstablePeriod( libHandle, TA_FUNC_UNST_ALL, 0 );
+   TA_SetUnstablePeriod( TA_FUNC_UNST_ALL, 0 );
 
    /* All test succeed. */
    return 0; 
 }
 
 /**** Local functions definitions.     ****/
-static TA_RetCode rangeTestFunction( TA_Libc *libHandle, 
+static TA_RetCode rangeTestFunction( 
                               TA_Integer startIdx,
                               TA_Integer endIdx,
                               TA_Real *outputBuffer,
@@ -206,8 +221,7 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
    switch( testParam->test->theFunction )
    {
    case TA_CCI_TEST:
-      retCode = TA_CCI( libHandle,
-                        startIdx,
+      retCode = TA_CCI( startIdx,
                         endIdx,
                         testParam->high,
                         testParam->low,
@@ -218,15 +232,26 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
                         outputBuffer );
       *lookback = TA_CCI_Lookback( testParam->test->optInTimePeriod_0 );
       break;
+   case TA_WILLR_TEST:
+      retCode = TA_WILLR( startIdx,
+                          endIdx,
+                          testParam->high,
+                          testParam->low,
+                          testParam->close,
+                          testParam->test->optInTimePeriod_0,
+                          outBegIdx,
+                          outNbElement,
+                          outputBuffer );
+      *lookback = TA_WILLR_Lookback( testParam->test->optInTimePeriod_0 );
+      break;
    default:
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(132);
    }
 
    return retCode;
 }
 
-static ErrorNumber do_test( TA_Libc *libHandle,
-                            const TA_History *history,
+static ErrorNumber do_test( const TA_History *history,
                             const TA_Test *test )
 {
    TA_RetCode retCode;
@@ -247,20 +272,31 @@ static ErrorNumber do_test( TA_Libc *libHandle,
    switch( test->theFunction )
    {
    case TA_CCI_TEST:
-      retCode = TA_CCI( libHandle,
-                         test->startIdx,
-                         test->endIdx,
-                         gBuffer[0].in,
-                         gBuffer[1].in,
-                         gBuffer[2].in,
-                         test->optInTimePeriod_0,
-                         &outBegIdx,
-                         &outNbElement,
-                         gBuffer[0].out0 );
+      retCode = TA_CCI( test->startIdx,
+                        test->endIdx,
+                        gBuffer[0].in,
+                        gBuffer[1].in,
+                        gBuffer[2].in,
+                        test->optInTimePeriod_0,
+                        &outBegIdx,
+                        &outNbElement,
+                        gBuffer[0].out0 );
+      break;
+
+   case TA_WILLR_TEST:
+      retCode = TA_WILLR( test->startIdx,
+                          test->endIdx,
+                          gBuffer[0].in,
+                          gBuffer[1].in,
+                          gBuffer[2].in,
+                          test->optInTimePeriod_0,
+                          &outBegIdx,
+                          &outNbElement,
+                          gBuffer[0].out0 );
       break;
 
    default:
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(133);
    }
 
    /* Check that the input were preserved. */
@@ -284,19 +320,29 @@ static ErrorNumber do_test( TA_Libc *libHandle,
    switch( test->theFunction )
    {
    case TA_CCI_TEST:
-      retCode = TA_CCI( libHandle,
-                         test->startIdx,
-                         test->endIdx,
-                         gBuffer[0].in,
-                         gBuffer[1].in,
-                         gBuffer[2].in,
-                         test->optInTimePeriod_0,
-                         &outBegIdx,
-                         &outNbElement,
-                         gBuffer[0].in );
+      retCode = TA_CCI( test->startIdx,
+                        test->endIdx,
+                        gBuffer[0].in,
+                        gBuffer[1].in,
+                        gBuffer[2].in,
+                        test->optInTimePeriod_0,
+                        &outBegIdx,
+                        &outNbElement,
+                        gBuffer[0].in );
+      break;
+   case TA_WILLR_TEST:
+      retCode = TA_WILLR( test->startIdx,
+                          test->endIdx,
+                          gBuffer[0].in,
+                          gBuffer[1].in,
+                          gBuffer[2].in,
+                          test->optInTimePeriod_0,
+                          &outBegIdx,
+                          &outNbElement,
+                          gBuffer[0].in );
       break;
    default:
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(134);
    }
 
    /* Check that the input were preserved. */
@@ -326,19 +372,29 @@ static ErrorNumber do_test( TA_Libc *libHandle,
    switch( test->theFunction )
    {
    case TA_CCI_TEST:
-      retCode = TA_CCI( libHandle,
-                         test->startIdx,
-                         test->endIdx,
-                         gBuffer[0].in,
-                         gBuffer[1].in,
-                         gBuffer[2].in,
-                         test->optInTimePeriod_0,
-                         &outBegIdx,
-                         &outNbElement,
-                         gBuffer[1].in );
+      retCode = TA_CCI( test->startIdx,
+                        test->endIdx,
+                        gBuffer[0].in,
+                        gBuffer[1].in,
+                        gBuffer[2].in,
+                        test->optInTimePeriod_0,
+                        &outBegIdx,
+                        &outNbElement,
+                        gBuffer[1].in );
+      break;
+   case TA_WILLR_TEST:
+      retCode = TA_WILLR( test->startIdx,
+                          test->endIdx,
+                          gBuffer[0].in,
+                          gBuffer[1].in,
+                          gBuffer[2].in,
+                          test->optInTimePeriod_0,
+                          &outBegIdx,
+                          &outNbElement,
+                          gBuffer[1].in );
       break;
    default:
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(135);
    }
 
    /* Check that the input were preserved. */
@@ -349,8 +405,7 @@ static ErrorNumber do_test( TA_Libc *libHandle,
    if( errNb != TA_TEST_PASS )
       return errNb;
 
-   /* The previous call to TA_MA should have the same output
-    * as this call.
+   /* The previous call should have the same output as this call.
     *
     * checkSameContent verify that all value different than NAN in
     * the first parameter is identical in the second parameter.
@@ -368,19 +423,29 @@ static ErrorNumber do_test( TA_Libc *libHandle,
    switch( test->theFunction )
    {
    case TA_CCI_TEST:
-      retCode = TA_CCI( libHandle,
-                         test->startIdx,
-                         test->endIdx,
-                         gBuffer[0].in,
-                         gBuffer[1].in,
-                         gBuffer[2].in,
-                         test->optInTimePeriod_0,
-                         &outBegIdx,
-                         &outNbElement,
-                         gBuffer[2].in );
+      retCode = TA_CCI( test->startIdx,
+                        test->endIdx,
+                        gBuffer[0].in,
+                        gBuffer[1].in,
+                        gBuffer[2].in,
+                        test->optInTimePeriod_0,
+                        &outBegIdx,
+                        &outNbElement,
+                        gBuffer[2].in );
+      break;
+   case TA_WILLR_TEST:
+      retCode = TA_WILLR( test->startIdx,
+                          test->endIdx,
+                          gBuffer[0].in,
+                          gBuffer[1].in,
+                          gBuffer[2].in,
+                          test->optInTimePeriod_0,
+                          &outBegIdx,
+                          &outNbElement,
+                          gBuffer[2].in );
       break;
    default:
-      retCode = TA_UNKNOWN_ERR;
+      retCode = TA_INTERNAL_ERROR(136);
    }
 
    /* Check that the input were preserved. */
@@ -414,10 +479,10 @@ static ErrorNumber do_test( TA_Libc *libHandle,
 
    if( test->doRangeTestFlag )
    {
-      errNb = doRangeTest( libHandle,
+      errNb = doRangeTest(
                            rangeTestFunction, 
                            TA_FUNC_UNST_NONE,
-                           (void *)&testParam, 1 );
+                           (void *)&testParam, 1, 0 );
       if( errNb != TA_TEST_PASS )
          return errNb;
    }

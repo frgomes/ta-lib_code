@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2002, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2003, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -43,6 +43,8 @@
  *  MMDDYY BY   Description
  *  -------------------------------------------------------------------
  *  112400 MF   Template creation.
+ *  022203 MF   Add MAMA
+ *  040503 Mf   Add T3
  *
  */
 
@@ -60,33 +62,48 @@
    #include "ta_utility.h"
 #endif
 
-int TA_MA_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
-                    TA_Integer    optInMethod_1,
-                    TA_Integer    optInCompatibility_2 ) 
+int TA_MA_Lookback( TA_Integer    optInTimePeriod_0, /* From 2 to TA_INTEGER_MAX */
+                    TA_MAType     optInMAType_1 ) 
 /**** END GENCODE SECTION 1 - DO NOT DELETE THIS LINE ****/
 {
    /* insert lookback code here. */
 
-   switch( optInMethod_1 )
+   switch( optInMAType_1 )
    {
-   case TA_MA_SIMPLE:
+   case TA_MAType_SMA:
       return TA_SMA_Lookback( optInTimePeriod_0 );
       break;
 
-   case TA_MA_EXPONENTIAL:
-      return TA_EMA_Lookback( optInTimePeriod_0, optInCompatibility_2 );                       
+   case TA_MAType_EMA:
+      return TA_EMA_Lookback( optInTimePeriod_0 );
       break;
 
-   case TA_MA_WEIGHTED:
+   case TA_MAType_WMA:
       return TA_WMA_Lookback( optInTimePeriod_0 );
       break;
 
-   case TA_MA_DEMA:
-      return TA_DEMA_Lookback( optInTimePeriod_0, optInCompatibility_2 );                        
+   case TA_MAType_DEMA:
+      return TA_DEMA_Lookback( optInTimePeriod_0 );
       break;
 
-   case TA_MA_TEMA:
-      return TA_TEMA_Lookback( optInTimePeriod_0, optInCompatibility_2 );
+   case TA_MAType_TEMA:
+      return TA_TEMA_Lookback( optInTimePeriod_0 );
+      break;
+
+   case TA_MAType_TRIMA:
+      return TA_TRIMA_Lookback( optInTimePeriod_0 );
+      break;
+
+   case TA_MAType_KAMA:
+      return TA_KAMA_Lookback( optInTimePeriod_0 );
+      break;
+
+   case TA_MAType_MAMA:
+      return TA_MAMA_Lookback( 0.5, 0.05 );
+      break;
+
+   case TA_MAType_T3:
+      return TA_T3_Lookback( optInTimePeriod_0, 0.7 );
       break;
    }
 
@@ -102,35 +119,30 @@ int TA_MA_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX
  * 
  * Optional Parameters
  * -------------------
- * optInTimePeriod_0:(From 1 to TA_INTEGER_MAX)
+ * optInTimePeriod_0:(From 2 to TA_INTEGER_MAX)
  *    Number of period
  * 
- * optInMethod_1:
- *    Define technique used for calculation
- * 
- * optInCompatibility_2:
- *    Make function compatible to some software
+ * optInMAType_1:
+ *    Type of Moving Average
  * 
  * 
  */
 
-TA_RetCode TA_MA( TA_Libc      *libHandle,
-                  TA_Integer    startIdx,
+TA_RetCode TA_MA( TA_Integer    startIdx,
                   TA_Integer    endIdx,
                   const TA_Real inReal_0[],
-                  TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
-                  TA_Integer    optInMethod_1,
-                  TA_Integer    optInCompatibility_2,
+                  TA_Integer    optInTimePeriod_0, /* From 2 to TA_INTEGER_MAX */
+                  TA_MAType     optInMAType_1,
                   TA_Integer   *outBegIdx,
                   TA_Integer   *outNbElement,
                   TA_Real       outReal_0[] )
 /**** END GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
 {
    /* Insert local variables here. */
+   TA_Real *dummyBuffer;
+   TA_RetCode retCode;
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
-
-   (void)libHandle; /* Get ride of warning if unused. */
 
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
@@ -143,19 +155,14 @@ TA_RetCode TA_MA( TA_Libc      *libHandle,
    /* Validate the parameters. */
    if( !inReal_0 ) return TA_BAD_PARAM;
    /* min/max are checked for optInTimePeriod_0. */
-   if( optInTimePeriod_0 == TA_INTEGER_DEFAULT )
+   if( (TA_Integer)optInTimePeriod_0 == TA_INTEGER_DEFAULT )
       optInTimePeriod_0 = 30;
-   else if( (optInTimePeriod_0 < 1) || (optInTimePeriod_0 > 2147483647) )
+   else if( ((TA_Integer)optInTimePeriod_0 < 2) || ((TA_Integer)optInTimePeriod_0 > 2147483647) )
       return TA_BAD_PARAM;
 
-   if( optInMethod_1 == TA_INTEGER_DEFAULT )
-      optInMethod_1 = 0;
-   else if( (optInMethod_1 < 0) || (optInMethod_1 > 4) )
-      return TA_BAD_PARAM;
-
-   if( optInCompatibility_2 == TA_INTEGER_DEFAULT )
-      optInCompatibility_2 = 0;
-   else if( (optInCompatibility_2 < 0) || (optInCompatibility_2 > 1) )
+   if( (TA_Integer)optInMAType_1 == TA_INTEGER_DEFAULT )
+      optInMAType_1 = 0;
+   else if( ((TA_Integer)optInMAType_1 < 0) || ((TA_Integer)optInMAType_1 > 8) )
       return TA_BAD_PARAM;
 
    if( outReal_0 == NULL )
@@ -168,36 +175,63 @@ TA_RetCode TA_MA( TA_Libc      *libHandle,
    /* Simply call the internal implementation of the
     * requested moving average.
     */
-   switch( optInMethod_1 )
+   switch( optInMAType_1 )
    {
-   case TA_MA_SIMPLE:
+   case TA_MAType_SMA:
       return TA_INT_SMA( startIdx, endIdx,                         
                          inReal_0, optInTimePeriod_0,                         
                          outBegIdx, outNbElement, outReal_0 );
       break;
-   case TA_MA_EXPONENTIAL:
+   case TA_MAType_EMA:
       return TA_INT_EMA( startIdx, endIdx,
                          inReal_0,
                          optInTimePeriod_0, PER_TO_K(optInTimePeriod_0),
-                         optInCompatibility_2,
                          outBegIdx, outNbElement, outReal_0 );
       break;
-   case TA_MA_WEIGHTED:
+   case TA_MAType_WMA:
       return TA_INT_WMA( startIdx, endIdx,
                          inReal_0, optInTimePeriod_0,
                          outBegIdx, outNbElement, outReal_0 );
       break;
-   case TA_MA_DEMA:
-      return TA_DEMA( libHandle,
-                      startIdx, endIdx,
-                      inReal_0, optInTimePeriod_0, optInCompatibility_2,                      
+   case TA_MAType_DEMA:
+      return TA_DEMA( startIdx, endIdx,
+                      inReal_0, optInTimePeriod_0,
                       outBegIdx, outNbElement, outReal_0 );
       break;
-   case TA_MA_TEMA:
-      return TA_TEMA( libHandle,
-                      startIdx, endIdx,
-                      inReal_0, optInTimePeriod_0, optInCompatibility_2,                      
+   case TA_MAType_TEMA:
+      return TA_TEMA( startIdx, endIdx,
+                      inReal_0, optInTimePeriod_0,
                       outBegIdx, outNbElement, outReal_0 );
+      break;
+   case TA_MAType_TRIMA:
+      return TA_TRIMA( startIdx, endIdx,
+                       inReal_0, optInTimePeriod_0,
+                       outBegIdx, outNbElement, outReal_0 );
+      break;
+   case TA_MAType_KAMA:
+      return TA_KAMA( startIdx, endIdx,
+                      inReal_0, optInTimePeriod_0,
+                      outBegIdx, outNbElement, outReal_0 );
+      break;
+   case TA_MAType_MAMA:
+      /* The optInTimePeriod_0 is ignored and the FAMA output of the MAMA
+       * is ignored.
+       */
+      dummyBuffer = TA_Malloc( sizeof(TA_Real)*(endIdx-startIdx+1) );
+      if( !dummyBuffer )
+         return TA_ALLOC_ERR;
+
+      retCode = TA_MAMA( startIdx, endIdx,
+                         inReal_0, 0.5, 0.05,
+                         outBegIdx, outNbElement,
+                         outReal_0, dummyBuffer );
+      TA_Free( dummyBuffer );
+      return retCode;
+      break;
+   case TA_MAType_T3:
+      return TA_T3( startIdx, endIdx,
+                    inReal_0, optInTimePeriod_0, 0.7,
+                    outBegIdx, outNbElement, outReal_0 );
       break;
    }
 

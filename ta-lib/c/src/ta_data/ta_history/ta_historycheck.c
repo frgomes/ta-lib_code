@@ -73,7 +73,7 @@
 TA_FILE_INFO;
 
 /**** Global functions definitions.   ****/
-TA_RetCode TA_HistoryCheckInternal( TA_Libc            *libHandle,
+TA_RetCode TA_HistoryCheckInternal(
                                     TA_Period           expectedPeriod,
                                     const TA_Timestamp *expectedStart,
                                     const TA_Timestamp *expectedEnd,
@@ -82,7 +82,7 @@ TA_RetCode TA_HistoryCheckInternal( TA_Libc            *libHandle,
                                     unsigned int       *faultyIndex,
                                     unsigned int       *faultyField )
 {
-   TA_PROLOG;
+   TA_PROLOG
    unsigned int allFieldNull;
 
    (void)faultyField;
@@ -91,14 +91,14 @@ TA_RetCode TA_HistoryCheckInternal( TA_Libc            *libHandle,
    (void)expectedEnd;
    (void)expectedStart;
 
-   TA_TRACE_BEGIN( libHandle, TA_HistoryCheckInternal );
+   TA_TRACE_BEGIN(  TA_HistoryCheckInternal );
 
-   TA_ASSERT( libHandle, history != NULL );
+   TA_ASSERT( history != NULL );
 
    /* Period shall be always set in the history. */
    if( history->period != expectedPeriod )
    {
-      TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+      TA_TRACE_RETURN( TA_INTERNAL_ERROR(45) );
    }
 
    /* Verify that an empty history is really empty. */
@@ -113,7 +113,7 @@ TA_RetCode TA_HistoryCheckInternal( TA_Libc            *libHandle,
       allFieldNull = 1;
       if( history->nbBars != 0 )
       {
-         TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+         TA_TRACE_RETURN( TA_INTERNAL_ERROR(46) );
       }
    }
    else
@@ -121,7 +121,7 @@ TA_RetCode TA_HistoryCheckInternal( TA_Libc            *libHandle,
 
    if( (history->nbBars == 0) && !allFieldNull )
    {
-      TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+      TA_TRACE_RETURN( TA_INTERNAL_ERROR(47) );
    }
 
    /* !!! Some more runtime verification could be added here... */

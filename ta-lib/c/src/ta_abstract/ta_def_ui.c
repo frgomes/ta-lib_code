@@ -58,8 +58,6 @@
 const char TA_GroupId_MathOperatorsString[]        = "Math Operators";
 const char TA_GroupId_MathTransformString[]        = "Math Transform";
 const char TA_GroupId_OverlapStudiesString[]       = "Overlap Studies";
-const char TA_GroupId_TrendIndicatorsString[]      = "Trend Indicators";
-const char TA_GroupId_MarketStrengthString[]       = "Market Strength";
 const char TA_GroupId_VolatilityIndicatorsString[] = "Volatility Indicators";
 const char TA_GroupId_MomentumIndicatorsString[]   = "Momentum Indicators";
 const char TA_GroupId_CycleIndicatorsString[]      = "Cycle Indicators";
@@ -73,8 +71,6 @@ const char *TA_GroupString[TA_NB_GROUP_ID] =
    &TA_GroupId_MathOperatorsString[0],
    &TA_GroupId_MathTransformString[0],
    &TA_GroupId_OverlapStudiesString[0],
-   &TA_GroupId_TrendIndicatorsString[0],
-   &TA_GroupId_MarketStrengthString[0],
    &TA_GroupId_VolatilityIndicatorsString[0],
    &TA_GroupId_MomentumIndicatorsString[0],
    &TA_GroupId_CycleIndicatorsString[0],
@@ -95,6 +91,20 @@ const TA_InputParameterInfo TA_DEF_UI_Input_Price_OHLCV =
                                     TA_IN_PRICE_LOW    |
                                     TA_IN_PRICE_CLOSE  |
                                     TA_IN_PRICE_VOLUME };
+
+const TA_InputParameterInfo TA_DEF_UI_Input_Price_HLCV =
+                                  { TA_Input_Price, "inPriceHLCV",
+                                    TA_IN_PRICE_HIGH   |
+                                    TA_IN_PRICE_LOW    |
+                                    TA_IN_PRICE_CLOSE  |
+                                    TA_IN_PRICE_VOLUME };
+
+const TA_InputParameterInfo TA_DEF_UI_Input_Price_OHLC =
+                                  { TA_Input_Price, "inPriceOHLC",
+                                    TA_IN_PRICE_OPEN   |
+                                    TA_IN_PRICE_HIGH   |
+                                    TA_IN_PRICE_LOW    |
+                                    TA_IN_PRICE_CLOSE  };
 
 const TA_InputParameterInfo TA_DEF_UI_Input_Price_HLC =
                                   { TA_Input_Price, "inPriceHLC",
@@ -128,10 +138,6 @@ const TA_OutputParameterInfo TA_DEF_UI_Output_Real =
 const TA_OutputParameterInfo TA_DEF_UI_Output_Integer =
                                   { TA_Output_Integer, "outInteger", TA_OUT_LINE };
 
-const TA_OutputParameterInfo TA_DEF_UI_Output_Draw =
-                                  { TA_Output_Draw, "outDraw", TA_OUT_LINE };
-
-
 /*****************************************************
  * Define from here the TA_Integer ranges
  ****************************************************/
@@ -150,6 +156,15 @@ const TA_IntegerRange TA_DEF_TimePeriod_Positive_Minimum5 =
    5,             /* min */
    TA_INTEGER_MAX,/* max */
    5,             /* suggested start */
+   200,           /* suggested end   */
+   1              /* suggested increment */
+};
+
+const TA_IntegerRange TA_DEF_TimePeriod_Positive_Minimum2 =
+{
+   2,             /* min */
+   TA_INTEGER_MAX,/* max */
+   4,             /* suggested start */
    200,           /* suggested end   */
    1              /* suggested increment */
 };
@@ -187,9 +202,103 @@ const TA_RealRange TA_DEF_NbDeviation =
    0.2             /* suggested increment */
 };
 
+const TA_RealRange TA_DEF_ZeroToOne =
+{
+   0.00,  /* min */
+   1.00,  /* max */
+   2,     /* precision */
+   0.01,  /* suggested start */
+   1.00,  /* suggested end   */
+   0.05   /* suggested increment */
+};
+
 /*****************************************************
  * Define from here the TA_OptInputParameterInfo.
  ****************************************************/
+
+const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_30_MINIMUM2 =
+{
+   TA_OptInput_IntegerRange, /* type */
+   "optInTimePeriod",        /* paramName */
+   0,                        /* flags */
+
+   "Time Period",            /* displayName */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
+   30, /* defaultValue */
+   "Number of period", /* hint */
+
+   NULL /* helpFile */
+};
+
+const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_21_MINIMUM2 =
+{
+   TA_OptInput_IntegerRange, /* type */
+   "optInTimePeriod",        /* paramName */
+   0,                        /* flags */
+
+   "Time Period",            /* displayName */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
+   21, /* defaultValue */
+   "Number of period", /* hint */
+
+   NULL /* helpFile */
+};
+
+const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_14_MINIMUM2 =
+{
+   TA_OptInput_IntegerRange, /* type */
+   "optInTimePeriod",        /* paramName */
+   0,                        /* flags */
+
+   "Time Period",            /* displayName */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
+   14, /* defaultValue */
+   "Number of period", /* hint */
+
+   NULL /* helpFile */
+};
+
+const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_14_MINIMUM5 =
+{
+   TA_OptInput_IntegerRange, /* type */
+   "optInTimePeriod",        /* paramName */
+   0,                        /* flags */
+
+   "Time Period",            /* displayName */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum5, /* dataSet */
+   14, /* defaultValue */
+   "Number of period", /* hint */
+
+   NULL /* helpFile */
+};
+
+const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_10_MINIMUM2 =
+{
+   TA_OptInput_IntegerRange, /* type */
+   "optInTimePeriod",        /* paramName */
+   0,                        /* flags */
+
+   "Time Period",            /* displayName */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
+   10, /* defaultValue */
+   "Number of period", /* hint */
+
+   NULL /* helpFile */
+};
+
+const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_5_MINIMUM2 =
+{
+   TA_OptInput_IntegerRange, /* type */
+   "optInTimePeriod",        /* paramName */
+   0,                        /* flags */
+
+   "Time Period",            /* displayName */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
+   5, /* defaultValue */
+   "Number of period", /* hint */
+
+   NULL /* helpFile */
+};
 
 const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_30 =
 {
@@ -213,20 +322,6 @@ const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_14 =
 
    "Time Period",            /* displayName */
    (const void *)&TA_DEF_TimePeriod_Positive, /* dataSet */
-   14, /* defaultValue */
-   "Number of period", /* hint */
-
-   NULL /* helpFile */
-};
-
-const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_14_MINIMUM5 =
-{
-   TA_OptInput_IntegerRange, /* type */
-   "optInTimePeriod",        /* paramName */
-   0,                        /* flags */
-
-   "Time Period",            /* displayName */
-   (const void *)&TA_DEF_TimePeriod_Positive_Minimum5, /* dataSet */
    14, /* defaultValue */
    "Number of period", /* hint */
 
@@ -260,7 +355,6 @@ const TA_OptInputParameterInfo TA_DEF_UI_TimePeriod_5 =
 
    NULL /* helpFile */
 };
-
 
 
 /* Use for the multiplier of standard deviations. */
@@ -313,32 +407,36 @@ const TA_OptInputParameterInfo TA_DEF_UI_HorizontalShift =
  * new MA will provide automatically a new way of calculating
  * to a multitude of other TA functions.
  */
-static const TA_IntegerDataPair TA_MA_MethodDataPair[] =
+static const TA_IntegerDataPair TA_MA_TypeDataPair[] =
 {
-   {0,"Simple"},
-   {1,"Exponential"},
-   {2,"Weighted"},
-   {3,"Dema" },
-   {4,"Tema" }
-/* {5,"Triangular"},
-   {6,"Linear Regression"}*/
+   {0,"SMA"},
+   {1,"EMA"},
+   {2,"WMA"},
+   {3,"DEMA" },
+   {4,"TEMA" },
+   {5,"TRIMA"},
+   {6,"KAMA" },
+   {7,"MAMA" },
+   {8,"T3"}
+   /*{...,"Linear Regression"}*/
 };
-static const TA_IntegerList TA_MA_MethodList =
+
+const TA_IntegerList TA_MA_TypeList =
 {
-   &TA_MA_MethodDataPair[0],
-   sizeof(TA_MA_MethodDataPair)/sizeof(TA_IntegerDataPair)
+   &TA_MA_TypeDataPair[0],
+   sizeof(TA_MA_TypeDataPair)/sizeof(TA_IntegerDataPair)
 };
 
 const TA_OptInputParameterInfo TA_DEF_UI_MA_Method =
 {
    TA_OptInput_IntegerList, /* type */
-   "optInMethod",           /* paramName */
+   "optInMAType",           /* paramName */
    0,                       /* flags */
 
-   "Method",                /* displayName */
-   (const void *)&TA_MA_MethodList, /* dataSet */
+   "MA Type",                /* displayName */
+   (const void *)&TA_MA_TypeList, /* dataSet */
    0, /* defaultValue = simple average */
-   "Define technique used for calculation", /* hint */
+   "Type of Moving Average", /* hint */
 
    NULL /* helpFile */
 };
@@ -353,7 +451,7 @@ const TA_OptInputParameterInfo TA_DEF_UI_Fast_Period =
    0,                        /* flags */
 
    "Fast Period",            /* displayName */
-   (const void *)&TA_DEF_TimePeriod_Positive, /* dataSet */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
    12, /* defaultValue */
    "Number of period for the fast MA", /* hint */
 
@@ -367,98 +465,10 @@ const TA_OptInputParameterInfo TA_DEF_UI_Slow_Period =
    0,                        /* flags */
 
    "Slow Period",            /* displayName */
-   (const void *)&TA_DEF_TimePeriod_Positive, /* dataSet */
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
    26, /* defaultValue */
    "Number of period for the slow MA", /* hint */
 
-   NULL /* helpFile */
-};
-
-/* The following is for the advanced compatibility parameter. */
-static const char comp_classic_string[]      = "Classic";
-static const char comp_metastock_string[]    = "Metastock";
-static const char comp_tradestation_string[] = "Tradestation";
-
-#define comp_classic      {0, comp_classic_string}
-#define comp_metastock    {1, comp_metastock_string}
-#define comp_tradestation {2, comp_tradestation_string}
-
-static const TA_IntegerDataPair TA_Compatibility_CL_MS[] =
-{
-   comp_classic, comp_metastock
-};
-
-static const TA_IntegerDataPair TA_Compatibility_CL_TS[] =
-{
-   comp_classic, comp_tradestation
-};
-
-static const TA_IntegerDataPair TA_Compatibility_CL_MS_TS[] =
-{
-   comp_classic, comp_metastock, comp_tradestation
-};
-
-static const TA_IntegerList TA_Compatibility_CL_MS_List =
-{
-   &TA_Compatibility_CL_MS[0],
-   sizeof(TA_Compatibility_CL_MS)/sizeof(TA_IntegerDataPair)
-};
-
-static const TA_IntegerList TA_Compatibility_CL_TS_List =
-{
-   &TA_Compatibility_CL_TS[0],
-   sizeof(TA_Compatibility_CL_TS)/sizeof(TA_IntegerDataPair)
-};
-
-static const TA_IntegerList TA_Compatibility_CL_MS_TS_List =
-{
-   &TA_Compatibility_CL_MS_TS[0],
-   sizeof(TA_Compatibility_CL_MS_TS)/sizeof(TA_IntegerDataPair)
-};
-
-static const char comp_paramName[]   = "optInCompatibility";
-static const char comp_displayName[] = "Compatibility";
-static const char comp_hintString[]  = "Make function compatible to some software";
-
-const TA_OptInputParameterInfo TA_DEF_UI_Compatibility_CL_MS =
-{
-   TA_OptInput_IntegerList, /* type */
-   comp_paramName,          /* paramName */
-   TA_OPTIN_ADVANCED,          /* flags */
-
-   comp_displayName,        /* displayName */
-   (const void *)&TA_Compatibility_CL_MS_List, /* dataSet */
-
-   0, /* defaultValue = "Classic" */
-   comp_hintString, /* hint */
-   NULL /* helpFile */
-};
-
-const TA_OptInputParameterInfo TA_DEF_UI_Compatibility_CL_TS =
-{
-   TA_OptInput_IntegerList, /* type */
-   comp_paramName,          /* paramName */
-   TA_OPTIN_ADVANCED,          /* flags */
-
-   comp_displayName,        /* displayName */
-   (const void *)&TA_Compatibility_CL_TS_List, /* dataSet */
-
-   0, /* defaultValue = "Classic" */
-   comp_hintString, /* hint */
-   NULL /* helpFile */
-};
-
-const TA_OptInputParameterInfo TA_DEF_UI_Compatibility_CL_MS_TS =
-{
-   TA_OptInput_IntegerList, /* type */
-   comp_paramName,          /* paramName */
-   TA_OPTIN_ADVANCED,          /* flags */
-
-   comp_displayName,        /* displayName */
-   (const void *)&TA_Compatibility_CL_MS_TS_List, /* dataSet */
-
-   0, /* defaultValue = "Classic" */
-   comp_hintString, /* hint */
    NULL /* helpFile */
 };
 

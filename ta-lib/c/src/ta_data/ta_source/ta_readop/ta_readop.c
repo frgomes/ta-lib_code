@@ -36,13 +36,14 @@
  *  Initial  Name/description
  *  -------------------------------------------------------------------
  *  MF       Mario Fortier
- *
+ *  MS       Marcel Schaible <marcel@schaible-consulting.de>
  *
  * Change history:
  *
  *  MMDDYY BY   Description
  *  -------------------------------------------------------------------
  *  110199 MF   First version.
+ *  010503 MF   Fix #644512. Problem with [-I] submitted by MS.
  *
  */
 
@@ -75,21 +76,17 @@
 /* None */
 
 /**** Local functions.    ****/
-static TA_RetCode findTokenId( TA_Libc *libHandle,
-                               const char *str,
+static TA_RetCode findTokenId( const char *str,
                                TA_TokenId *id,
                                TA_Integer *optionalParam );
 
-static TA_RetCode buildReadOp( TA_Libc *libHandle,
-                               /*TA_PrivateAsciiHandle *privateHandle,*/
-                               TA_ReadOpInfo *readOpInfo,
+static TA_RetCode buildReadOp( TA_ReadOpInfo *readOpInfo,
                                const char *localBuf,
                                TA_ReadOp *readOp,
                                TA_TokenId *tokenId,
                                unsigned int *intraDayIncrementInSecond );
 
-static TA_RetCode findTokenIdWithParam( TA_Libc *libHandle, 
-                                        const char *str,
+static TA_RetCode findTokenIdWithParam( const char *str,
                                         TA_TokenId *tokenId,
                                         unsigned int *extractedParam );
 
@@ -100,26 +97,21 @@ TA_FILE_INFO;
 
 TA_RetCode TA_ReadOpInfoFree( TA_ReadOpInfo *readOpInfoToBeFreed )
 {
-   TA_Libc *libHandle;
-
    if( readOpInfoToBeFreed )
    {
-      libHandle = readOpInfoToBeFreed->libHandle;
-
       if( readOpInfoToBeFreed->arrayReadOp )
-         TA_Free( libHandle, readOpInfoToBeFreed->arrayReadOp );
+         TA_Free( readOpInfoToBeFreed->arrayReadOp );
 
-      TA_Free( libHandle, readOpInfoToBeFreed );
+      TA_Free( readOpInfoToBeFreed );
    }
 
    return TA_SUCCESS;
 }
 
-TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
-                               const char *sourceInfo,
+TA_RetCode TA_ReadOpInfoAlloc( const char *sourceInfo,
                                TA_ReadOpInfo **allocatedInfo )
 {
-   TA_PROLOG;
+   TA_PROLOG
    TA_RetCode retCode;
 
    TA_ReadOp readOp;
@@ -146,13 +138,12 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
    register unsigned int flagSet;
    register TA_ReadOp *ptrReadOp;
    
-   TA_TRACE_BEGIN( libHandle, TA_BuildArrayReadOp );
+   TA_TRACE_BEGIN(  TA_BuildArrayReadOp );
 
-   newReadOpInfo = (TA_ReadOpInfo *)TA_Malloc( libHandle, sizeof( TA_ReadOpInfo ) );
+   newReadOpInfo = (TA_ReadOpInfo *)TA_Malloc( sizeof( TA_ReadOpInfo ) );
 
    /* These variables are resolved within this function. */
    memset( newReadOpInfo, 0, sizeof( TA_ReadOpInfo ) );
-   newReadOpInfo->libHandle = libHandle;
 
    /* At this point, TA_ReadOpInfoFree can be safely called. */
 
@@ -212,7 +203,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
           */
          if( nbCharInField >= 2 )
          {
-            TA_ASSERT( libHandle, ptrFirstCarInField != NULL );
+            TA_ASSERT( ptrFirstCarInField != NULL );
             if( (ptrFirstCarInField[0] == '-') &&
                 (toupper(ptrFirstCarInField[1]) == 'H') )
                nbField--;
@@ -245,7 +236,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
    }
 
    /* Build the TA_ReadOp array */
-   arrayReadOp = (TA_ReadOp *)TA_Malloc( libHandle, sizeof( TA_ReadOp ) * nbField );
+   arrayReadOp = (TA_ReadOp *)TA_Malloc( sizeof( TA_ReadOp ) * nbField );
 
    if( !arrayReadOp )
    {
@@ -272,7 +263,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
 
         /* Identify the field and build the TA_ReadOp. */
         tempInt = 0;
-        retCode = buildReadOp( libHandle,
+        retCode = buildReadOp(
                                newReadOpInfo,
                                (const char *)&localBuf[0],
                                &arrayReadOp[opIdx],
@@ -354,7 +345,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
    if( opIdx != nbField )
    {
       TA_ReadOpInfoFree( newReadOpInfo );
-      TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+      TA_TRACE_RETURN( TA_INTERNAL_ERROR(89) );
    }
 
    arrayReadOp[opIdx-1] |= TA_CMD_LAST_FLAG;
@@ -367,7 +358,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
    {
       readOp = arrayReadOp[opIdx];
 
-      TA_ASSERT( libHandle, readOp != 0 ); /* Parano test */
+      TA_ASSERT( readOp != 0 ); /* Parano test */
 
       if( !TA_IS_PERMANENT_SKIP_SET(readOp) )
       {
@@ -387,8 +378,8 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
          }
 
          /* Parano test: Double-check redundant field in a different way. */
-         fieldMask = TA_ReadOpToField( libHandle, readOp );
-         TA_ASSERT( libHandle, fieldMask != 0 );
+         fieldMask = TA_ReadOpToField( readOp );
+         TA_ASSERT( fieldMask != 0 );
          if( !(fieldMask & TA_TIMESTAMP) && (fieldProvided & fieldMask) )
          {
             TA_ReadOpInfoFree( newReadOpInfo );
@@ -425,7 +416,10 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
       ptrReadOp = &arrayReadOp[opIdx-1];
       readOp = *ptrReadOp;
 
-      if( !flagSet && TA_IS_INTEGER_CMD(readOp) && (TA_GET_IDX(readOp)<=TA_YEAR_IDX) )
+      if( !flagSet                          && 
+          TA_IS_INTEGER_CMD(readOp)         && 
+          (TA_GET_IDX(readOp)<=TA_YEAR_IDX) && 
+          !TA_IS_PERMANENT_SKIP_SET(readOp) )
       {
          TA_SET_TIMESTAMP_COMPLETE(*ptrReadOp);
          flagSet = 1;
@@ -462,7 +456,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
          break;
       default:
          TA_ReadOpInfoFree( newReadOpInfo );
-         TA_FATAL( libHandle, NULL, timeframeIdx, fieldProvided );
+         TA_FATAL(  NULL, timeframeIdx, fieldProvided );
       }
 
       if( errorOccurred )
@@ -496,7 +490,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
          period = TA_1SEC;
          break;
       default:
-         TA_FATAL( libHandle, NULL, timeframeIdx, fieldProvided );
+         TA_FATAL(  NULL, timeframeIdx, fieldProvided );
       }
    }
 
@@ -519,7 +513,7 @@ TA_RetCode TA_ReadOpInfoAlloc( TA_Libc *libHandle,
 }
 
 
-unsigned int TA_ReadOpToField( TA_Libc *libHandle, TA_ReadOp readOp )
+unsigned int TA_ReadOpToField( TA_ReadOp readOp )
 {
   if( TA_IS_REAL_CMD(readOp) )
   {
@@ -548,47 +542,45 @@ unsigned int TA_ReadOpToField( TA_Libc *libHandle, TA_ReadOp readOp )
      }
   }
 
-  TA_FATAL_RET( libHandle, NULL, readOp, 0, TA_ALL );
+  TA_FATAL_RET( NULL, readOp, 0, TA_ALL );
 
   return TA_ALL;
 }
 
 /**** Local functions definitions.     ****/
 
-static TA_RetCode buildReadOp( TA_Libc *libHandle,
-                               /* TA_PrivateAsciiHandle *privateHandle, */
-                               TA_ReadOpInfo *readOpInfo,
+static TA_RetCode buildReadOp( TA_ReadOpInfo *readOpInfo,
                                const char *localBuf,
                                TA_ReadOp *readOp,
                                TA_TokenId *tokenId,
                                unsigned int *intraDayIncrementInSeconds )
 {
-   TA_PROLOG;
+   TA_PROLOG
    TA_TokenId id;
    TA_ReadOp tmpReadOp;
    TA_RetCode retCode;
    TA_Integer optionalParam;
    unsigned int mult, intraDayIncrement;
 
-   TA_TRACE_BEGIN( libHandle, buildReadOp );
+   TA_TRACE_BEGIN(  buildReadOp );
 
    if( !readOp || !intraDayIncrementInSeconds || !tokenId )
    {
-      TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+      TA_TRACE_RETURN( TA_INTERNAL_ERROR(9) );
    }
 
    *intraDayIncrementInSeconds = 0;
    *readOp = 0;
    *tokenId = 0;
 
-   retCode = findTokenId( libHandle, localBuf, &id, &optionalParam );
+   retCode = findTokenId( localBuf, &id, &optionalParam );
 
    if( retCode != TA_SUCCESS )
    {
       TA_TRACE_RETURN( retCode );
    }
 
-   TA_ASSERT( libHandle, id != TA_TOK_END );
+   TA_ASSERT( id != TA_TOK_END );
 
    /* Trap special token not generating a TA_ReadOp. */
    if( id == TA_TOK_SKIP_N_HEADER_LINE )
@@ -668,7 +660,7 @@ static TA_RetCode buildReadOp( TA_Libc *libHandle,
       TA_SET_NB_NUMERIC( tmpReadOp, 0 );
       break;
    default:
-      TA_SET_NB_NUMERIC( tmpReadOp, TA_TokenMaxSize(libHandle,id) );
+      TA_SET_NB_NUMERIC( tmpReadOp, TA_TokenMaxSize(id) );
       break;
    }
 
@@ -770,19 +762,18 @@ static TA_RetCode buildReadOp( TA_Libc *libHandle,
    TA_TRACE_RETURN( TA_SUCCESS );
 }
 
-static TA_RetCode findTokenId( TA_Libc *libHandle,
-                               const char *str,
+static TA_RetCode findTokenId( const char *str,
                                TA_TokenId *id,
                                TA_Integer *optionalParam )
 {
-   TA_PROLOG;
+   TA_PROLOG
    unsigned int i;
    const char *cmp_str;
    TA_TokenId tokenId;
    unsigned int extractedParam;
    TA_RetCode retCode;
 
-   TA_TRACE_BEGIN( libHandle, findTokenId );
+   TA_TRACE_BEGIN(  findTokenId );
 
    *id = TA_TOK_END;
    *optionalParam = 0;
@@ -793,7 +784,7 @@ static TA_RetCode findTokenId( TA_Libc *libHandle,
    /* First check for token directly mapping to a simple string. */
    for( i=0; (i < TA_NB_TOKEN_ID) && (tokenId == TA_TOK_END); i++ )
    {
-      cmp_str = TA_TokenString( libHandle, (TA_TokenId)i );
+      cmp_str = TA_TokenString( (TA_TokenId)i );
 
       if( cmp_str )
       {
@@ -814,7 +805,7 @@ static TA_RetCode findTokenId( TA_Libc *libHandle,
     */
    if( tokenId == TA_TOK_END )
    {
-      retCode = findTokenIdWithParam( libHandle, &str[0], &tokenId, &extractedParam );
+      retCode = findTokenIdWithParam( &str[0], &tokenId, &extractedParam );
 
       if( retCode != TA_SUCCESS )
       {
@@ -862,8 +853,7 @@ static TA_RetCode findTokenId( TA_Libc *libHandle,
 }
 
 
-static TA_RetCode findTokenIdWithParam( TA_Libc *libHandle,
-                                        const char *str,
+static TA_RetCode findTokenIdWithParam( const char *str,
                                         TA_TokenId *tokenId,
                                         unsigned int *extractedParam )
 {
@@ -876,7 +866,7 @@ static TA_RetCode findTokenIdWithParam( TA_Libc *libHandle,
    /* Identify the token.  */
    for( i=0; (i < TA_NB_TOKEN_ID) && (*tokenId == TA_TOK_END); i++ )
    {
-      cmp_str = TA_TokenString( libHandle, (TA_TokenId)i );
+      cmp_str = TA_TokenString( (TA_TokenId)i );
 
       if( cmp_str )
       {

@@ -87,26 +87,22 @@ typedef struct
 } TA_MarketPageParseOpaqueData;
 
 /**** Local functions declarations.    ****/
-static TA_RetCode translateToYahooName( TA_Libc *libHandle,
-                                        const TA_String *categoryName,
+static TA_RetCode translateToYahooName( const TA_String *categoryName,
                                         const TA_String *symbolName,
                                         char *buffer,
                                         unsigned int maxBufferSize );
 
-static TA_RetCode internalMarketPageAlloc( TA_Libc *libHandle,
-                                           const TA_DecodingParam *decodingParam,
+static TA_RetCode internalMarketPageAlloc( const TA_DecodingParam *decodingParam,
                                            const char *yahooName,
                                            TA_YahooMarketPage **allocatedMarketPage );
 
 static TA_RetCode internalMarketPageFree( TA_YahooMarketPage *marketPage );
 
-static TA_RetCode parseMarketPage( TA_Libc *libHandle,
-                                   const TA_DecodingParam *decodingParam,
+static TA_RetCode parseMarketPage( const TA_DecodingParam *decodingParam,
                                    TA_StreamAccess *streamAccess,
                                    TA_YahooMarketPage *marketPage );
 
-static TA_RetCode processMarketPageTable( TA_Libc *libHandle, 
-                                          unsigned int line,
+static TA_RetCode processMarketPageTable( unsigned int line,
                                           unsigned int column,
                                           const char *data,
                                           const char *href,
@@ -117,37 +113,54 @@ TA_FILE_INFO;
 
 static TA_YahooExtension TA_YahooExtensionTable[] = 
 {
-   { "TO", TA_Country_ID_CA, "TSE",   "STOCK" }, /* Toronto Stock Exchange */
-   { "V",  TA_Country_ID_CA, "CDNX",  "STOCK" }, /* Canadian Venture Exchange (Vancouver) */
-   { "M",  TA_Country_ID_CA, "MSE",   "STOCK" }, /* Montreal Stock Exchange */
-   { "OB", TA_Country_ID_US, "OTCBB", "STOCK" }  /* Over-the-counter, Bulletin Board */
+   { "TO", TA_Country_ID_CA, "TSE",   "STOCK"  },  /* Toronto Stock Exchange */
+   { "V",  TA_Country_ID_CA, "CDNX",  "STOCK"  },  /* Canadian Venture Exchange (Vancouver) */
+   { "M",  TA_Country_ID_CA, "MSE",   "STOCK"  },  /* Montreal Stock Exchange */
+   { "OB", TA_Country_ID_US, "OTCBB", "STOCK"  },  /* Over-the-counter, Bulletin Board */
+   { "PK", TA_Country_ID_US, "OTC",   "STOCK"  },  /* Over-the-counter, Pink Sheet */
+   { "L",  TA_Country_ID_UK, "LSE",   "STOCK"  },  /* London Stock Exchange */
+   { "CO", TA_Country_ID_DK, "XCSE",  "STOCK"  },  /* Copenhagen Stock Exchange */
+   { "PA", TA_Country_ID_FR, "SBF",   "STOCK"  },  /* Bourse De Paris */
+   { "BE", TA_Country_ID_DE, "BSE",   "STOCK"  },  /* Berlin Stock Exchange */
+   { "BM", TA_Country_ID_DE, "BWB",   "STOCK"  },  /* Bremen Stock Exchange */
+   { "D",  TA_Country_ID_DE, "RWB",   "STOCK"  },  /* Dusseldorf Stock Exchange */
+   { "DE", TA_Country_ID_DE, "XETRA", "STOCK"  },  /* XETRA Stock Exchange */
+   { "MI", TA_Country_ID_IT, "BI",    "STOCK"  },  /* Borsa Italia - Milan Stock Exchange */
+   { "VI", TA_Country_ID_AT, "WBAG",  "STOCK"  },  /* Austria - Vienna Stock Exchange */
+   { "NL", TA_Country_ID_AT, "AEX",   "STOCK"  },  /* Amsterdam Stock Exchange */
+   { "OL", TA_Country_ID_NO, "OSE",   "STOCK"  },  /* Oslo Stock Exchange */
+   { "BC", TA_Country_ID_ES, "BSE",   "STOCK"  },  /* Barcelona Stock Exchange */
+   { "BI", TA_Country_ID_ES, "BIL",   "STOCK"  },  /* Bilbao Stock Exchange */
+   { "MF", TA_Country_ID_ES, "MEFF",  "FUTURE" },  /* Madrid Fixed Income and Derivative Market */
+   { "MC", TA_Country_ID_ES, "MEFF",  "STOCK"  },  /* Madrid Fixed Income and Derivative Market */
+   { "MA", TA_Country_ID_ES, "BDM",   "STOCK"  },  /* Madrid Stock Exchange */
+   { "ST", TA_Country_ID_SE, "OMX",   "STOCK"  }   /* Stockholm Stock Exchange */
 };
 
 #define NB_YAHOO_EXCHANGE_EXTENSION (sizeof(TA_YahooExtensionTable)/sizeof(TA_YahooExtension))
 
 /**** Global functions definitions.   ****/
-TA_RetCode TA_AllocStringFromLibName( TA_Libc *libHandle,
-                                      const TA_String *category,
+TA_RetCode TA_AllocStringFromLibName( const TA_String *category,
                                       const TA_String *symbol,
                                       TA_String **allocatedYahooName )
 {
-   TA_PROLOG;
+   TA_PROLOG
 
    TA_RetCode retCode;
    TA_StringCache *stringCache;
    char buffer[200];
 
-   TA_TRACE_BEGIN( libHandle, TA_AllocStringFromLibName );
+   TA_TRACE_BEGIN(  TA_AllocStringFromLibName );
    buffer[199] = '\0'; /* Just to be safe. */
 
    /* Translate the category/symbol into the yahoo! name. */
-   retCode = translateToYahooName( libHandle, category, symbol, &buffer[0], 199 );
+   retCode = translateToYahooName( category, symbol, &buffer[0], 199 );
    if( retCode != TA_SUCCESS )
    {
       TA_TRACE_RETURN( retCode );
    }
 
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
    *allocatedYahooName = TA_StringAlloc( stringCache, buffer );
    if( !*allocatedYahooName )
    {
@@ -157,13 +170,13 @@ TA_RetCode TA_AllocStringFromLibName( TA_Libc *libHandle,
    TA_TRACE_RETURN( TA_SUCCESS );
 }
 
-TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
-                                        TA_DecodingParam *marketDecodingParam,
+TA_RetCode TA_AllocStringFromYahooName( TA_DecodingParam *marketDecodingParam,
                                         const char *yahooSymbol,
                                         TA_String **allocatedCategoryName,
-                                        TA_String **allocatedSymbolName )
+                                        TA_String **allocatedSymbolName,
+                                        unsigned int allowOnlineProcessing )
 {
-   TA_PROLOG;
+   TA_PROLOG
 
    TA_RetCode retCode;
 
@@ -184,16 +197,16 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
 
    TA_YahooMarketPage *allocatedMarketPage;
 
-   TA_TRACE_BEGIN( libHandle, TA_AllocStringFromYahooName );
+   TA_TRACE_BEGIN(  TA_AllocStringFromYahooName );
 
    /* Validate parameter */
-   if( !libHandle || !marketDecodingParam || !yahooSymbol ||
+   if( !marketDecodingParam || !yahooSymbol ||
        !allocatedCategoryName || !allocatedSymbolName )
    {
       TA_TRACE_RETURN( TA_BAD_PARAM );
    }
 
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
 
    /* Set a pointer on where the symbol start. */
    symbol = yahooSymbol;
@@ -248,10 +261,21 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
 
    if( !exchangeString )
    {
+      /* If online access is not allowed, and the 
+       * symbol does not have a known extension, it
+       * is not possible to identify the exchange.
+       *
+       * With online access, the exchange can be
+       * found by doing further investigation on the
+       * Yahoo! web sites.
+       */
+      if( !allowOnlineProcessing )
+         return TA_INVALID_SECURITY_EXCHANGE;
+
       /* OK, we need to proceed by extracting the info
        * from Yahoo! web sites.
        */
-      retCode = internalMarketPageAlloc( libHandle,
+      retCode = internalMarketPageAlloc(
                                          marketDecodingParam,
                                          yahooSymbol,
                                          &allocatedMarketPage );
@@ -259,8 +283,8 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
       if( retCode != TA_SUCCESS )
          return retCode;
 
-      TA_DEBUG_ASSERT( libHandle, allocatedMarketPage->exchange != NULL );
-      TA_DEBUG_ASSERT( libHandle, allocatedMarketPage->type != NULL );
+      TA_DEBUG_ASSERT( allocatedMarketPage->exchange != NULL );
+      TA_DEBUG_ASSERT( allocatedMarketPage->type != NULL );
 
       /* All these string pointer are globals. So the allocatedMarketPage
        * can be freed and the member-poitners are still valid.
@@ -272,12 +296,12 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
       internalMarketPageFree( allocatedMarketPage );
    }   
    
-   TA_DEBUG_ASSERT( libHandle, typeString     != NULL );
-   TA_DEBUG_ASSERT( libHandle, exchangeString != NULL );
-   TA_DEBUG_ASSERT( libHandle, countryAbbrev  != NULL );
+   TA_DEBUG_ASSERT( typeString     != NULL );
+   TA_DEBUG_ASSERT( exchangeString != NULL );
+   TA_DEBUG_ASSERT( countryAbbrev  != NULL );
 
    /* Build the Category string into a buffer. */
-   tempBuffer = TA_Malloc( libHandle,
+   tempBuffer = TA_Malloc(
                            strlen( countryAbbrev  )  +
                            strlen( exchangeString ) +
                            strlen( typeString )     + 3 );
@@ -287,7 +311,7 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
    /* Allocate the Category string. */
    allocCategory = TA_StringAlloc_UC( stringCache, tempBuffer );
 
-   TA_Free( libHandle, tempBuffer );
+   TA_Free(  tempBuffer );
 
    if( !allocCategory )
    {
@@ -310,8 +334,7 @@ TA_RetCode TA_AllocStringFromYahooName( TA_Libc *libHandle,
    TA_TRACE_RETURN( TA_SUCCESS );
 }
 
-TA_RetCode TA_YahooMarketPageAlloc( TA_Libc *libHandle,
-                                    const TA_DecodingParam *decodingParam,
+TA_RetCode TA_YahooMarketPageAlloc( const TA_DecodingParam *decodingParam,
                                     const TA_String *categoryName,
                                     const TA_String *symbolName,
                                     TA_YahooMarketPage **allocatedMarketPage )
@@ -322,11 +345,11 @@ TA_RetCode TA_YahooMarketPageAlloc( TA_Libc *libHandle,
    buffer[199] = '\0'; /* Just to be safe. */
 
    /* Translate the category/symbol into the yahoo! name. */
-   retCode = translateToYahooName( libHandle, categoryName, symbolName, &buffer[0], 199 );
+   retCode = translateToYahooName( categoryName, symbolName, &buffer[0], 199 );
    if( retCode != TA_SUCCESS )
       return retCode;
 
-   return internalMarketPageAlloc( libHandle,
+   return internalMarketPageAlloc(
                                    decodingParam,
                                    buffer,
                                    allocatedMarketPage );
@@ -338,12 +361,11 @@ TA_RetCode TA_YahooMarketPageFree( TA_YahooMarketPage *marketPage )
    return internalMarketPageFree( marketPage );
 }
 
-TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
-                                         const TA_DecodingParam *decodingParam,
+TA_RetCode TA_WebPageAllocFromYahooName( const TA_DecodingParam *decodingParam,
                                          const char *yahooName,
                                          TA_WebPage **allocatedWebPage )
 {
-   TA_PROLOG;
+   TA_PROLOG
    TA_RetCode retCode;
    char webSitePage[300];
    unsigned int prefixLength, suffixLength, symbolLength, i;
@@ -351,9 +373,9 @@ TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
    const char *uirPrefix, *uirSuffix;
    TA_WebPage *webPage;
 
-   TA_TRACE_BEGIN( libHandle, TA_WebPageAllocFromYahooName );
+   TA_TRACE_BEGIN(  TA_WebPageAllocFromYahooName );
 
-   retCode = TA_UNKNOWN_ERR;
+   retCode = TA_INTERNAL_ERROR(117);
 
    if( !decodingParam || !yahooName || !allocatedWebPage )
    {
@@ -361,14 +383,14 @@ TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
    }
 
    webSiteAddr  = decodingParam->webSiteServer;
-   TA_ASSERT( libHandle, webSiteAddr != NULL );
+   TA_ASSERT( webSiteAddr != NULL );
 
    uirPrefix = decodingParam->uirPrefix;
-   TA_ASSERT( libHandle, uirPrefix != NULL );
+   TA_ASSERT( uirPrefix != NULL );
    prefixLength = strlen( uirPrefix );
 
    uirSuffix = decodingParam->uirSuffix;
-   TA_ASSERT( libHandle, uirSuffix != NULL );
+   TA_ASSERT( uirSuffix != NULL );
    suffixLength = strlen( uirSuffix );
    
    symbolLength = strlen( yahooName );
@@ -382,13 +404,10 @@ TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
    /* Get the Web Page */   
    for( i=0; i < 10; i++ )
    {
-      retCode = TA_WebPageAlloc( libHandle,
+      retCode = TA_WebPageAlloc(
                                  webSiteAddr,
                                  webSitePage,
                                  NULL, NULL, &webPage, 10 );
-
-      /* Let's be polite and not overload Yahoo! */
-      TA_Sleep( 1 );
 
       if( retCode == TA_SUCCESS )
          break;
@@ -409,20 +428,18 @@ TA_RetCode TA_WebPageAllocFromYahooName( TA_Libc *libHandle,
 }
 
 /**** Local functions definitions.     ****/
-static TA_RetCode translateToYahooName( TA_Libc *libHandle,
-                                        const TA_String *categoryName,
+static TA_RetCode translateToYahooName( const TA_String *categoryName,
                                         const TA_String *symbolName,
                                         char *buffer,
                                         unsigned int maxBufferSize )
 {
    TA_CountryId countryId;
-   unsigned int i, symbolLength, xchangeLength, extLength;
+   unsigned int i, symbolLength, xchangeLength, extLength, typeLength;
    const char *symbol;
    const char *xchange;
+   const char *type;
    const char *category;
    const char *ext;
-
-   (void)libHandle;
 
    category = TA_StringToChar(categoryName);
 
@@ -456,8 +473,16 @@ static TA_RetCode translateToYahooName( TA_Libc *libHandle,
    countryId = TA_CountryAbbrevToId( TA_StringToChar(categoryName) );
    switch( countryId )
    {
-   case TA_Country_ID_CA:
-   case TA_Country_ID_US:
+   case TA_Country_ID_CA: /* Canada */
+   case TA_Country_ID_US: /* United States */
+   case TA_Country_ID_UK: /* United Kingdom */
+   case TA_Country_ID_DE: /* Germany */
+   case TA_Country_ID_DK: /* Denmark */
+   case TA_Country_ID_ES: /* Spain */
+   case TA_Country_ID_FR: /* France */
+   case TA_Country_ID_IT: /* Italy */
+   case TA_Country_ID_SE: /* Sweden */
+   case TA_Country_ID_NO: /* Norway */
       /* Get the length of the second field of the category.
        * This field must exist, else an error is returned.
        */
@@ -471,12 +496,25 @@ static TA_RetCode translateToYahooName( TA_Libc *libHandle,
       if( *xchange == '\0' )
          return TA_INVALID_SECURITY_EXCHANGE;
 
+      /* Get the length of the third field of the category.
+       * This field must exist, else an error is returned.
+       */
+      type = strchr( xchange, '.' );
+      if( !type || (type == xchange) || (*type == '\0') )
+         return TA_INVALID_SECURITY_TYPE;
+      type++;
+      if( *type == '\0' )
+         return TA_INVALID_SECURITY_TYPE;
+      typeLength = strlen( type );
+
       /* Look for the possible extension corresponding to
        * this exchange. If found, append it to the symbol.
        */
       for( i=0; i < NB_YAHOO_EXCHANGE_EXTENSION; i++ )
       {         
-         if( lexncmp( TA_YahooExtensionTable[i].exchange, xchange, xchangeLength ) == 0 )
+         if( (TA_YahooExtensionTable[i].countryId == countryId) &&
+             (lexncmp( TA_YahooExtensionTable[i].exchange, xchange, xchangeLength ) == 0) &&
+             (lexncmp( TA_YahooExtensionTable[i].type, type, typeLength ) == 0) )
          {
             ext = TA_YahooExtensionTable[i].extension;
             extLength = strlen( ext );
@@ -499,8 +537,7 @@ static TA_RetCode translateToYahooName( TA_Libc *libHandle,
 }
 
                                   
-static TA_RetCode internalMarketPageAlloc( TA_Libc *libHandle,
-                                           const TA_DecodingParam *decodingParam,
+static TA_RetCode internalMarketPageAlloc( const TA_DecodingParam *decodingParam,
                                            const char *yahooName,
                                            TA_YahooMarketPage **allocatedMarketPage )
 {
@@ -509,7 +546,7 @@ static TA_RetCode internalMarketPageAlloc( TA_Libc *libHandle,
    TA_YahooMarketPage *marketPage;
    TA_StreamAccess *streamAccess;
 
-   retCode = TA_WebPageAllocFromYahooName( libHandle,
+   retCode = TA_WebPageAllocFromYahooName(
                                            decodingParam,
                                            yahooName,
                                            &webPage );
@@ -518,7 +555,7 @@ static TA_RetCode internalMarketPageAlloc( TA_Libc *libHandle,
       return retCode;
 
    /* Allocate the structure who will contained the extracted data */
-   marketPage = (TA_YahooMarketPage *)TA_Malloc( libHandle, sizeof( TA_YahooMarketPage ) );
+   marketPage = (TA_YahooMarketPage *)TA_Malloc( sizeof( TA_YahooMarketPage ) );
    if( !marketPage )
    {
       TA_WebPageFree( webPage );
@@ -527,13 +564,12 @@ static TA_RetCode internalMarketPageAlloc( TA_Libc *libHandle,
    memset( marketPage, 0, sizeof( TA_YahooMarketPage ) );
 
    marketPage->magicNb = TA_MARKET_PAGE_MAGIC_NB;
-   marketPage->libHandle = libHandle;
 
    /* From this point, internalMarketPageFree can be safely called. */
     
    /* Extract the data by parsing the Web Page. */
    streamAccess = TA_StreamAccessAlloc( webPage->content );
-   retCode = parseMarketPage( libHandle,
+   retCode = parseMarketPage(
                               decodingParam,
                               streamAccess,
                               marketPage );
@@ -569,37 +605,32 @@ static TA_RetCode internalMarketPageAlloc( TA_Libc *libHandle,
 
 static TA_RetCode internalMarketPageFree( TA_YahooMarketPage *marketPage )
 {
-   TA_Libc *libHandle;
    TA_StringCache *stringCache;
 
    if( marketPage )
    {
-      libHandle = marketPage->libHandle;
-
       if( marketPage->magicNb != TA_MARKET_PAGE_MAGIC_NB )
          return TA_BAD_OBJECT;
 
       if( marketPage->name )
       {
-         stringCache = TA_GetGlobalStringCache( libHandle );
+         stringCache = TA_GetGlobalStringCache();
          TA_StringFree( stringCache, marketPage->name );
       }
 
-      TA_Free( libHandle, marketPage );
+      TA_Free(  marketPage );
    }
 
    return TA_SUCCESS;
 }
 
-static TA_RetCode parseMarketPage( TA_Libc *libHandle,
-                                   const TA_DecodingParam *decodingParam,
+static TA_RetCode parseMarketPage( const TA_DecodingParam *decodingParam,
                                    TA_StreamAccess *streamAccess,
                                    TA_YahooMarketPage *marketPage )
 {
    TA_RetCode retCode;
    TA_MarketPageParseOpaqueData paramData;
 
-   (void)libHandle;
    paramData.decodingParam = decodingParam;
    paramData.marketPage = marketPage;
 
@@ -615,7 +646,7 @@ static TA_RetCode parseMarketPage( TA_Libc *libHandle,
    return TA_SUCCESS;
 }
 
-static TA_RetCode processMarketPageTable( TA_Libc *libHandle, 
+static TA_RetCode processMarketPageTable( 
                                           unsigned int line,
                                           unsigned int column,
                                           const char *data,
@@ -638,7 +669,6 @@ static TA_RetCode processMarketPageTable( TA_Libc *libHandle,
    };
 
    (void)href;
-   (void)libHandle;
   
    paramData = (TA_MarketPageParseOpaqueData *)opaqueData;
 

@@ -133,8 +133,6 @@ typedef struct
 /* Hidden data within a TA_YahooIdx. */
 typedef struct
 {
-   TA_Libc *libHandle;
-
    TA_Timestamp timestamp;
 
    /* Variable used only while building the 
@@ -155,10 +153,12 @@ typedef struct
 {
    TA_YahooIdx *idx;
    TA_CountryId countryId;
+   const char *serverName;
+   const char *topIndex;
 } TA_TableParseOpaqueData;
 
 /**** Local functions declarations.    ****/
-static void freeYahooCategory( TA_Libc *libHandle, void *toBeFreed );
+static void freeYahooCategory( void *toBeFreed );
 static TA_RetCode addYahooSymbol( TA_YahooIdx *idx, 
                                   TA_String *catString,
                                   TA_String *symString );
@@ -180,43 +180,40 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
 static TA_RetCode buildIdxStream( const TA_YahooIdx *idx, TA_Stream *stream );
 
 static TA_RetCode buildDictFromWebSite( TA_YahooIdx *yahooIdx, 
-                                        TA_Libc *libHandle,
                                         TA_CountryId countryId );
 
 /* Write the equivalent of a TA_DecodingParam to a stream. */
-static TA_RetCode writeDecodingParam( TA_Libc *libHandle, 
+static TA_RetCode writeDecodingParam( 
                                       TA_Stream *stream,
                                       TA_DecodingParam *param );
 
 /* Alloc a TA_DecodingParam from a stream. */
-static TA_RetCode allocDecodingParam( TA_Libc *libHandle,
-                                      TA_StreamAccess *streamAccess,
+static TA_RetCode allocDecodingParam( TA_StreamAccess *streamAccess,
                                       TA_DecodingParam **paramAllocated );
 
 /* Free a TA_DecodingParam */
-static TA_RetCode freeDecodingParam( TA_Libc *libHandle, TA_DecodingParam *param );
+static TA_RetCode freeDecodingParam( TA_DecodingParam *param );
 
 /* Function where the symbols are extracted from the Yahoo! index page. */
-static TA_RetCode addSymbolsFromWebPage( TA_Libc *libHandle,
-                                         TA_WebPage *webPage,
+static TA_RetCode addSymbolsFromWebPage( TA_WebPage *webPage,
                                          void *opaqueData );
 
 /* Function for parsing HTML tables. */
-static TA_RetCode processTopIndex( TA_Libc *libHandle, 
+static TA_RetCode processTopIndex( 
                                    unsigned int line,
                                    unsigned int column,
                                    const char *data,
                                    const char *href,
                                    void *opaqueData);
 
-static TA_RetCode processIndex( TA_Libc *libHandle, 
+static TA_RetCode processIndex( 
                                 unsigned int line,
                                 unsigned int column,
                                 const char *data,
                                 const char *href,
                                 void *opaqueData);
 
-static TA_RetCode addTheSymbolFromWebPage( TA_Libc *libHandle, 
+static TA_RetCode addTheSymbolFromWebPage( 
                                            unsigned int line,
                                            unsigned int column,
                                            const char *data,
@@ -226,6 +223,7 @@ static TA_RetCode addTheSymbolFromWebPage( TA_Libc *libHandle,
 /**** Local variables definitions.     ****/
 TA_FILE_INFO;
 
+/* American and Canadian decoding info. */
 static TA_DecodingParam defaultHistoricalDecoding =
 {
    "chart.yahoo.com",
@@ -250,6 +248,34 @@ static TA_DecodingParam defaultInfoDecoding =
    0x00000000,0x00,0x00,0x00,0x00,0x0000,0x0000
 };
 
+/* European Web Site decoding info.
+ *
+ * Just use the UK site for all european
+ * data.
+ */
+static TA_DecodingParam euHistoricalDecoding =
+{
+   "uk.table.finance.yahoo.com",
+   "/table.csv?s=",
+   "&a=1&b=1&c=1950&d=1&e=1&f=3000&g=d&q=q&y=0&z=file&x=.csv",
+   0x00000000,0x00,0x00,0x00,0x00,0x0000,0x0000
+};
+
+static TA_DecodingParam euMarketDecoding =
+{
+   "finance.yahoo.com",
+   "/q?s=",
+   "&d=t",
+   0x00000000,0x00,0x00,0x00,0x00,0x0000,0x0000
+};
+
+static TA_DecodingParam euInfoDecoding =
+{
+   "finance.yahoo.com",
+   "/d/quotes.csv?s=",
+   "&f=sl1d1t1c1ohgv&e=.csv",
+   0x00000000,0x00,0x00,0x00,0x00,0x0000,0x0000
+};
 
 
 /**** Global functions definitions.   ****/
@@ -257,6 +283,8 @@ static TA_DecodingParam defaultInfoDecoding =
 TA_DecodingParam *TA_YahooIdxDecodingParam( TA_YahooIdx *idx, TA_DecodeType type )
 {
    TA_YahooIdxHidden *idxHidden;
+
+   TA_ASSERT_RET( idx != NULL, NULL );
 
    idxHidden = (TA_YahooIdxHidden *)idx->hiddenData;
    if( !idxHidden )
@@ -278,22 +306,21 @@ TA_DecodingParam *TA_YahooIdxDecodingParam( TA_YahooIdx *idx, TA_DecodeType type
    }
 }
 
-TA_RetCode TA_YahooIdxAlloc( TA_Libc               *libHandle,
-                             TA_CountryId           countryId,
+TA_RetCode TA_YahooIdxAlloc( TA_CountryId           countryId,
                              TA_YahooIdx          **yahooIdxAllocated,
                              TA_YahooIdxStrategy    strategy,
                              TA_Stream             *stream,
                              TA_Timestamp          *localCacheTimeout,
                              TA_Timestamp          *remoteCacheTimeout )
 {
-   TA_PROLOG;
+   TA_PROLOG
    TA_YahooIdx *idx;
    TA_RetCode retCode;
    TA_YahooIdxHidden *idxHidden;
    unsigned int idxDone, i;
    const char *tempPtr;
 
-   if( !libHandle || !yahooIdxAllocated )
+   if( !yahooIdxAllocated )
       return TA_BAD_PARAM;
 
    (void)theFileDatePtr;
@@ -301,10 +328,10 @@ TA_RetCode TA_YahooIdxAlloc( TA_Libc               *libHandle,
 
    *yahooIdxAllocated = NULL;
 
-   TA_TRACE_BEGIN( libHandle, TA_YahooIdxAlloc );
+   TA_TRACE_BEGIN( TA_YahooIdxAlloc );
 
    /* Allocate the basic infrastructure for building the index. */
-   idx = (TA_YahooIdx *)TA_Malloc( libHandle, sizeof( TA_YahooIdx ) );
+   idx = (TA_YahooIdx *)TA_Malloc( sizeof( TA_YahooIdx ) );
    if( !idx )
    {
       TA_TRACE_RETURN( TA_ALLOC_ERR );
@@ -312,16 +339,15 @@ TA_RetCode TA_YahooIdxAlloc( TA_Libc               *libHandle,
 
    memset( idx, 0, sizeof( TA_YahooIdx ) );
    
-   idxHidden = (TA_YahooIdxHidden *)TA_Malloc( libHandle, sizeof( TA_YahooIdxHidden ) );
+   idxHidden = (TA_YahooIdxHidden *)TA_Malloc( sizeof( TA_YahooIdxHidden ) );
    if( !idxHidden )
    {
-      TA_Free( libHandle, idx );
+      TA_Free(  idx );
       TA_TRACE_RETURN( TA_ALLOC_ERR );
    }
    memset( idxHidden, 0, sizeof( TA_YahooIdxHidden ) );
 
    idx->hiddenData = (void *)idxHidden;
-   idxHidden->libHandle = libHandle;
 
    /* From this point TA_YahooIdxFree can be safely called. */
 
@@ -424,7 +450,6 @@ TA_RetCode TA_YahooIdxFree( TA_YahooIdx *idxToBeFreed )
 {
    TA_YahooIdxHidden *idxHidden;
    unsigned int i;
-   TA_Libc *libHandle;
    TA_StringCache *stringCache;
    TA_YahooCategory *category;
    unsigned int catBelongToDict;
@@ -434,12 +459,11 @@ TA_RetCode TA_YahooIdxFree( TA_YahooIdx *idxToBeFreed )
       /* Get pointers used to free the rest... */
       idxHidden = (TA_YahooIdxHidden *)idxToBeFreed->hiddenData;
       if( !idxHidden )
-         return TA_UNKNOWN_ERR;
+         return TA_INTERNAL_ERROR(105);
 
-      libHandle = idxHidden->libHandle;
-      stringCache = TA_GetGlobalStringCache( libHandle );
+      stringCache = TA_GetGlobalStringCache();
       if( !stringCache )
-         return TA_UNKNOWN_ERR;
+         return TA_INTERNAL_ERROR(106);
 
       /* Identify who owns the category, consequently
        * who should free these (when a dictionary exist
@@ -460,27 +484,27 @@ TA_RetCode TA_YahooIdxFree( TA_YahooIdx *idxToBeFreed )
             {
                category = idxToBeFreed->categories[i];
                if( category )
-                  freeYahooCategory( libHandle, category );
+                  freeYahooCategory( category );
             }
          }
 
-         TA_Free( libHandle, idxToBeFreed->categories );
+         TA_Free(  idxToBeFreed->categories );
       }
 
       /* Free hidden data. */
       if( idxHidden->catDict )
          TA_DictFree( idxHidden->catDict );
       if( idxHidden->decodingParam.historical )
-         freeDecodingParam( libHandle, idxHidden->decodingParam.historical );
+         freeDecodingParam( idxHidden->decodingParam.historical );
       if( idxHidden->decodingParam.market )
-         freeDecodingParam( libHandle, idxHidden->decodingParam.market );
+         freeDecodingParam( idxHidden->decodingParam.market );
       if( idxHidden->decodingParam.info )
-         freeDecodingParam( libHandle, idxHidden->decodingParam.info );
+         freeDecodingParam( idxHidden->decodingParam.info );
 
-      TA_Free( libHandle, idxHidden );
+      TA_Free(  idxHidden );
 
       /* Finally, free the TA_YahooIdx itself. */
-      TA_Free( libHandle, idxToBeFreed );
+      TA_Free(  idxToBeFreed );
    }
 
    return TA_SUCCESS;
@@ -488,9 +512,8 @@ TA_RetCode TA_YahooIdxFree( TA_YahooIdx *idxToBeFreed )
 
 TA_RetCode TA_YahooIdxStream( const TA_YahooIdx *idx, TA_Stream **streamAllocated )
 {
-   TA_PROLOG;
+   TA_PROLOG
    TA_RetCode retCode;
-   TA_Libc *libHandle;
    TA_YahooIdxHidden *idxHidden;
    TA_Stream *stream;
    TA_Stream *compressedStream;
@@ -506,17 +529,16 @@ TA_RetCode TA_YahooIdxStream( const TA_YahooIdx *idx, TA_Stream **streamAllocate
       return TA_BAD_PARAM;
 
    idxHidden = idx->hiddenData;
-   libHandle = idxHidden->libHandle;
 
    *streamAllocated = NULL;
 
-   TA_TRACE_BEGIN( libHandle, TA_YahooIdxStream );
+   TA_TRACE_BEGIN(  TA_YahooIdxStream );
 
    #ifdef TA_DEBUG
-      out = TA_GetStdioFilePtr( libHandle );
+      out = TA_GetStdioFilePtr();
    #endif
 
-   stream = TA_StreamAlloc( libHandle );
+   stream = TA_StreamAlloc();
    if( !stream )
    {
       TA_TRACE_RETURN( TA_ALLOC_ERR );
@@ -531,7 +553,7 @@ TA_RetCode TA_YahooIdxStream( const TA_YahooIdx *idx, TA_Stream **streamAllocate
    }
 
    /* Compress the stream. */
-   compressedStream = TA_StreamAlloc( libHandle );
+   compressedStream = TA_StreamAlloc();
    if( !compressedStream )
    {
       TA_StreamFree( stream );
@@ -600,7 +622,6 @@ static TA_RetCode addYahooSymbol( TA_YahooIdx *idx,
    TA_RetCode retCode;
    TA_YahooCategory *category;
    TA_YahooCategoryHidden *categoryHidden;
-   TA_Libc *libHandle;
    TA_StringCache *stringCache;
    TA_YahooIdxHidden *idxHidden;
 
@@ -613,15 +634,11 @@ static TA_RetCode addYahooSymbol( TA_YahooIdx *idx,
 
    idxHidden = (TA_YahooIdxHidden *)idx->hiddenData;
    if( !idxHidden )
-      return TA_UNKNOWN_ERR;
+      return TA_INTERNAL_ERROR(107);
 
-   libHandle = idxHidden->libHandle;
-   if( !libHandle )
-      return TA_UNKNOWN_ERR;
-
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
    if( !stringCache )
-      return TA_UNKNOWN_ERR;
+      return TA_INTERNAL_ERROR(109);
 
    /* Add the symbol/category to the dictionnary. */
    category = TA_DictGetValue_S( idxHidden->catDict, TA_StringToChar(catString) );
@@ -631,14 +648,14 @@ static TA_RetCode addYahooSymbol( TA_YahooIdx *idx,
       /* The category is already in the dictionnary. */
       categoryHidden = (TA_YahooCategoryHidden *)category->hiddenData;
       if( !categoryHidden )
-         return TA_UNKNOWN_ERR;
+         return TA_INTERNAL_ERROR(110);
    }
    else
    {
       /* The category is NOT in the dictionary.
        * Allocate a new category.
        */
-      category = (TA_YahooCategory *)TA_Malloc( libHandle, sizeof( TA_YahooCategory ) );
+      category = (TA_YahooCategory *)TA_Malloc( sizeof( TA_YahooCategory ) );
       if( !category )
          return TA_ALLOC_ERR;
 
@@ -649,29 +666,29 @@ static TA_RetCode addYahooSymbol( TA_YahooIdx *idx,
       category->name = TA_StringDup( stringCache, catString );
       if( !category->name )
       {
-         freeYahooCategory( libHandle, category );
+         freeYahooCategory( category );
          return TA_ALLOC_ERR;
       }
 
-      category->hiddenData = (TA_YahooCategoryHidden *)TA_Malloc( libHandle, sizeof( TA_YahooCategoryHidden ) );
+      category->hiddenData = (TA_YahooCategoryHidden *)TA_Malloc( sizeof( TA_YahooCategoryHidden ) );
       if( !category->hiddenData )
       {
-         freeYahooCategory( libHandle, category );
+         freeYahooCategory( category );
          return TA_ALLOC_ERR;
       }
 
       categoryHidden = category->hiddenData;
-      categoryHidden->symDict = TA_DictAlloc( libHandle, TA_DICT_KEY_ONE_STRING, NULL );
+      categoryHidden->symDict = TA_DictAlloc( TA_DICT_KEY_ONE_STRING, NULL );
       if( !categoryHidden->symDict )
       {
-         freeYahooCategory( libHandle, category );
+         freeYahooCategory( category );
          return TA_ALLOC_ERR;
       }
 
       retCode = TA_DictAddPair_S( idxHidden->catDict, category->name, category );
       if( retCode != TA_SUCCESS )
       {
-         freeYahooCategory( libHandle, category );
+         freeYahooCategory( category );
          return retCode;
       }
 
@@ -693,7 +710,7 @@ static TA_RetCode addYahooSymbol( TA_YahooIdx *idx,
    return TA_SUCCESS;
 }
 
-static void freeYahooCategory( TA_Libc *libHandle, void *toBefreed )
+static void freeYahooCategory( void *toBefreed )
 {
    TA_YahooCategory *category;
    unsigned int i;
@@ -702,7 +719,7 @@ static void freeYahooCategory( TA_Libc *libHandle, void *toBefreed )
    TA_String *stringPtr;
 
    category = (TA_YahooCategory *)toBefreed;
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
 
    if( category )
    {
@@ -718,7 +735,7 @@ static void freeYahooCategory( TA_Libc *libHandle, void *toBefreed )
                TA_StringFree( stringCache, stringPtr );
          }
 
-         TA_Free( libHandle, (void *)category->symbols );
+         TA_Free(  (void *)category->symbols );
       }
 
       hiddenData = category->hiddenData;
@@ -726,10 +743,10 @@ static void freeYahooCategory( TA_Libc *libHandle, void *toBefreed )
       {
          if( hiddenData->symDict )
             TA_DictFree( hiddenData->symDict );
-         TA_Free( libHandle, (void *)hiddenData );
+         TA_Free(  (void *)hiddenData );
       } 
 
-      TA_Free( libHandle, (void *)category );
+      TA_Free(  (void *)category );
    }
 }
 
@@ -748,7 +765,7 @@ static TA_RetCode buildIndexFromStream( TA_YahooIdx *idx,
    #endif
       
    #ifdef TA_DEBUG
-      out = TA_GetStdioFilePtr( ((TA_YahooIdxHidden *)idx->hiddenData)->libHandle );
+      out = TA_GetStdioFilePtr();
    #endif
 
    /* Build the public tables from the stream. */
@@ -845,7 +862,6 @@ static TA_RetCode buildIndexFromRemoteCache( TA_YahooIdx *idx, TA_Timestamp *cac
    TA_WebPage *webPage;
    TA_Stream  *stream;
    TA_YahooIdxHidden *idxHidden;
-   TA_Libc *libHandle;
    const char *cachePath;
    char *pathBuffer;
    FILE *out;
@@ -860,16 +876,14 @@ static TA_RetCode buildIndexFromRemoteCache( TA_YahooIdx *idx, TA_Timestamp *cac
    if( !idxHidden )
       return TA_BAD_PARAM;
 
-   libHandle = idxHidden->libHandle;
-
    /* Get the cache online from TA-LIB org */
    if( strlen( (const char *)&idx->countryAbbrev[0] ) != 2 )
-      return TA_UNKNOWN_ERR;
+      return TA_INTERNAL_ERROR(111);
 
    sprintf( buffer, "/rdata/y_%c%c.dat",
             tolower(idx->countryAbbrev[0]),
             tolower(idx->countryAbbrev[1]) );
-   retCode = TA_WebPageAlloc( libHandle, "ta-lib.org",
+   retCode = TA_WebPageAlloc( "ta-lib.org",
                               buffer,
                               NULL, NULL,
                               &webPage, 2 );
@@ -889,13 +903,13 @@ static TA_RetCode buildIndexFromRemoteCache( TA_YahooIdx *idx, TA_Timestamp *cac
     */
 
    /* Save the remote cache locally. */
-   cachePath = TA_GetLocalCachePath( libHandle );
+   cachePath = TA_GetLocalCachePath();
 
    if( cachePath )
    {
       /* Create the local file */
       pathLength = strlen( cachePath );
-      pathBuffer = TA_Malloc( libHandle, pathLength + 11 );
+      pathBuffer = TA_Malloc( pathLength + 11 );
       if( pathLength )
       {
          sprintf( pathBuffer, "%s%cy_%c%c.dat",
@@ -918,7 +932,7 @@ static TA_RetCode buildIndexFromRemoteCache( TA_YahooIdx *idx, TA_Timestamp *cac
          /* printf( "Saving local [%s]\n", pathBuffer ); */
          TA_StreamToFile( stream, out );
       }
-      TA_Free( libHandle, pathBuffer );
+      TA_Free(  pathBuffer );
       fclose(out);
    }
 
@@ -941,20 +955,18 @@ static TA_RetCode buildIndexFromRemoteCache( TA_YahooIdx *idx, TA_Timestamp *cac
 static TA_RetCode buildIndexFromYahooWebSite( TA_YahooIdx *idx )
 {
    TA_RetCode retCode;
-   TA_Libc *libHandle;
    TA_YahooIdxHidden *idxHidden;
 
    idxHidden = (TA_YahooIdxHidden *)idx->hiddenData;
-   libHandle = idxHidden->libHandle;
 
    /* Allocate a dictionary to make it easier to build the whole index. */
-   idxHidden->catDict = (void *)TA_DictAlloc( libHandle, TA_DICT_KEY_ONE_STRING, freeYahooCategory );
+   idxHidden->catDict = (void *)TA_DictAlloc( TA_DICT_KEY_ONE_STRING, freeYahooCategory );
    if( !idxHidden->catDict )
    {
       return TA_ALLOC_ERR;
    }
 
-   retCode = buildDictFromWebSite( idx, libHandle, idx->countryId );
+   retCode = buildDictFromWebSite( idx, idx->countryId );
    if( retCode != TA_SUCCESS )
    {
       return retCode;
@@ -971,7 +983,6 @@ static TA_RetCode buildIndexFromYahooWebSite( TA_YahooIdx *idx )
 static TA_RetCode convertDictToTables( TA_YahooIdx *idx )
 {
    TA_YahooIdxHidden *idxHidden;
-   TA_Libc *libHandle;
    TA_StringCache *stringCache;
    TA_YahooCategoryHidden *categoryHidden;
    TA_YahooCategory *category;
@@ -984,15 +995,14 @@ static TA_RetCode convertDictToTables( TA_YahooIdx *idx )
       return TA_BAD_PARAM;
    
    idxHidden = (TA_YahooIdxHidden *)idx->hiddenData;
-   libHandle = idxHidden->libHandle;
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
 
    nbCategory = TA_DictAccessFirst( idxHidden->catDict );
    if( nbCategory == 0 )
       idx->categories = NULL;
    else
    {
-      idx->categories = (TA_YahooCategory **)TA_Malloc( libHandle, sizeof( TA_YahooCategory * ) * nbCategory );
+      idx->categories = (TA_YahooCategory **)TA_Malloc( sizeof( TA_YahooCategory * ) * nbCategory );
       memset( idx->categories, 0, sizeof( TA_YahooCategory * ) * nbCategory );
       if( !idx->categories )
          return TA_ALLOC_ERR;
@@ -1004,20 +1014,20 @@ static TA_RetCode convertDictToTables( TA_YahooIdx *idx )
       {
         category = (TA_YahooCategory *)TA_DictAccessValue( idxHidden->catDict );
         if( !category )
-           return TA_UNKNOWN_ERR;
+           return TA_INTERNAL_ERROR(112);
 
         categoryHidden = category->hiddenData;
         if( !categoryHidden )
-           return TA_UNKNOWN_ERR;
+           return TA_INTERNAL_ERROR(113);
 
         /* Iterate through the symbols. */
         symDict = categoryHidden->symDict;
         nbSymbol = TA_DictAccessFirst( symDict );
         if( nbSymbol == 0 )
-           return TA_UNKNOWN_ERR;
+           return TA_INTERNAL_ERROR(114);
         else
         {
-           category->symbols = (TA_String **)TA_Malloc( libHandle, sizeof( TA_String *) * nbSymbol );
+           category->symbols = (TA_String **)TA_Malloc( sizeof( TA_String *) * nbSymbol );
            if( !category->symbols )
               return TA_ALLOC_ERR;
            category->nbSymbol = nbSymbol;
@@ -1110,9 +1120,6 @@ static TA_RetCode buildIdxStream( const TA_YahooIdx *idx, TA_Stream *stream )
    TA_YahooCategory *category;
    unsigned int i, j;
    TA_Timestamp timestamp;
-   TA_Libc *libHandle;
-
-   libHandle = ((TA_YahooIdxHidden *)(idx->hiddenData))->libHandle;
 
    retCode = TA_StreamAddInt32( stream, TA_YAHOO_IDX_MAGIC_NB );
    if( retCode != TA_SUCCESS )
@@ -1149,19 +1156,43 @@ static TA_RetCode buildIdxStream( const TA_YahooIdx *idx, TA_Stream *stream )
    case TA_Country_ID_US:
    case TA_Country_ID_CA:
        /* Write historical decoding data. */
-       retCode = writeDecodingParam( libHandle, stream,
+       retCode = writeDecodingParam( stream,
                                      &defaultHistoricalDecoding );
 
        /* Write market decoding data. */
        if( retCode == TA_SUCCESS )
-          retCode = writeDecodingParam( libHandle, stream,
+          retCode = writeDecodingParam( stream,
                                         &defaultMarketDecoding );
 
        /* Write info decoding data. */
        if( retCode == TA_SUCCESS )
-          retCode = writeDecodingParam( libHandle, stream,
+          retCode = writeDecodingParam( stream,
                                         &defaultInfoDecoding );
        break;
+
+   case TA_Country_ID_UK: /* United Kingdom */
+   case TA_Country_ID_DE: /* Germany */
+   case TA_Country_ID_DK: /* Denmark */
+   case TA_Country_ID_ES: /* Spain */
+   case TA_Country_ID_FR: /* France */
+   case TA_Country_ID_IT: /* Italy */
+   case TA_Country_ID_SE: /* Sweden */
+   case TA_Country_ID_NO: /* Norway */
+       /* Write historical decoding data. */
+       retCode = writeDecodingParam( stream,
+                                     &euHistoricalDecoding );
+
+       /* Write market decoding data. */
+       if( retCode == TA_SUCCESS )
+          retCode = writeDecodingParam( stream,
+                                        &euMarketDecoding );
+
+       /* Write info decoding data. */
+       if( retCode == TA_SUCCESS )
+          retCode = writeDecodingParam( stream,
+                                        &euInfoDecoding );       
+       break;
+
    default:
       return TA_UNSUPPORTED_COUNTRY;
    }
@@ -1183,7 +1214,7 @@ static TA_RetCode buildIdxStream( const TA_YahooIdx *idx, TA_Stream *stream )
 
       category = idx->categories[i];
       if( !category )
-         return TA_UNKNOWN_ERR;
+         return TA_INTERNAL_ERROR(115);
 
       retCode = TA_StreamAddString( stream, category->name );
       if( retCode != TA_SUCCESS )
@@ -1222,7 +1253,6 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
    unsigned int nbCategory, nbSymbol;
    unsigned char data;
    TA_YahooIdxHidden *idxHidden;
-   TA_Libc *libHandle;
    TA_YahooCategory *category;
    unsigned char countryAbbrev[3];
 
@@ -1231,9 +1261,7 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
 
    idxHidden = (TA_YahooIdxHidden *)idx->hiddenData;
    if( !idxHidden )
-      return TA_UNKNOWN_ERR;
-
-   libHandle = idxHidden->libHandle;
+      return TA_INTERNAL_ERROR(116);
 
    retCode = TA_StreamAccessGetInt32( streamAccess, &intData );
    if( retCode != TA_SUCCESS )
@@ -1268,15 +1296,15 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
       return TA_UNSUPPORTED_COUNTRY;
 
    /* Read the web page decoding parameters. */
-   retCode = allocDecodingParam( libHandle, streamAccess, &idxHidden->decodingParam.historical );
+   retCode = allocDecodingParam( streamAccess, &idxHidden->decodingParam.historical );
    if( retCode != TA_SUCCESS )
       return retCode;
 
-   retCode = allocDecodingParam( libHandle, streamAccess, &idxHidden->decodingParam.market );
+   retCode = allocDecodingParam( streamAccess, &idxHidden->decodingParam.market );
    if( retCode != TA_SUCCESS )
       return retCode;
 
-   retCode = allocDecodingParam( libHandle, streamAccess, &idxHidden->decodingParam.info );
+   retCode = allocDecodingParam( streamAccess, &idxHidden->decodingParam.info );
    if( retCode != TA_SUCCESS )
       return retCode;
 
@@ -1285,7 +1313,7 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
    if( retCode != TA_SUCCESS )
       return retCode;
    tempInt = sizeof( TA_YahooCategory *) * nbCategory;
-   idx->categories = TA_Malloc( libHandle, tempInt );
+   idx->categories = TA_Malloc( tempInt );
    if( !idx->categories )
       return TA_ALLOC_ERR;
    idx->nbCategory = 0; /* Will get incremented as the category are allocated. */
@@ -1303,7 +1331,7 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
       /* Allocate directly the category in the public interface.
        * No need for catDict.
        */
-      category = TA_Malloc( libHandle, sizeof( TA_YahooCategory ) );
+      category = TA_Malloc( sizeof( TA_YahooCategory ) );
       if( !category )
          return TA_ALLOC_ERR;
       memset( category, 0, sizeof( TA_YahooCategory ) );
@@ -1327,7 +1355,7 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
 
       /* Allocate the space needed for the symbols. */
       tempInt = sizeof( TA_String *) * nbSymbol;
-      category->symbols = (TA_String **)TA_Malloc( libHandle, tempInt );
+      category->symbols = (TA_String **)TA_Malloc( tempInt );
       if( !category->symbols )
          return TA_ALLOC_ERR;
 
@@ -1352,7 +1380,7 @@ static TA_RetCode convertStreamToTables( TA_YahooIdx *idx, TA_StreamAccess *stre
    return TA_SUCCESS;
 }
 
-static TA_RetCode writeDecodingParam( TA_Libc *libHandle, 
+static TA_RetCode writeDecodingParam( 
                                       TA_Stream *stream,
                                       TA_DecodingParam *param )
 {
@@ -1360,7 +1388,7 @@ static TA_RetCode writeDecodingParam( TA_Libc *libHandle,
    TA_String *tempString;
    TA_StringCache *stringCache;
 
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
 
    /* Add webSiteServer. */
    tempString= TA_StringAlloc( stringCache, param->webSiteServer );
@@ -1417,22 +1445,21 @@ static TA_RetCode writeDecodingParam( TA_Libc *libHandle,
    return TA_SUCCESS;
 }
 
-static TA_RetCode allocDecodingParam( TA_Libc *libHandle,
-                                      TA_StreamAccess *streamAccess,
+static TA_RetCode allocDecodingParam( TA_StreamAccess *streamAccess,
                                       TA_DecodingParam **paramAllocated )
 {
    TA_DecodingParam *param;
    TA_RetCode retCode;
    TA_String *tempString;
 
-   if( !libHandle || !streamAccess || !paramAllocated )
+   if( !streamAccess || !paramAllocated )
       return TA_BAD_PARAM;
 
    *paramAllocated = NULL;
 
    retCode = TA_SUCCESS;
 
-   param = (TA_DecodingParam *)TA_Malloc( libHandle, sizeof( TA_DecodingParam ) );
+   param = (TA_DecodingParam *)TA_Malloc( sizeof( TA_DecodingParam ) );
    if( !param )
       return TA_ALLOC_ERR;
 
@@ -1486,7 +1513,7 @@ static TA_RetCode allocDecodingParam( TA_Libc *libHandle,
 
 Exit_allocDecodingParam:
    if( retCode != TA_SUCCESS )
-      freeDecodingParam( libHandle, param );
+      freeDecodingParam( param );
    else
       *paramAllocated = param;
 
@@ -1494,14 +1521,13 @@ Exit_allocDecodingParam:
 }
 
 /* Free a TA_DecodingParam */
-static TA_RetCode freeDecodingParam( TA_Libc *libHandle,
-                                     TA_DecodingParam *param )
+static TA_RetCode freeDecodingParam( TA_DecodingParam *param )
 {
    TA_StringCache *stringCache;
 
    if( param )
    {
-      stringCache = TA_GetGlobalStringCache( libHandle );
+      stringCache = TA_GetGlobalStringCache();
 
       if( param->webSiteServer )
          TA_StringFree( stringCache, TA_StringFromChar(param->webSiteServer) );
@@ -1512,18 +1538,18 @@ static TA_RetCode freeDecodingParam( TA_Libc *libHandle,
       if( param->uirSuffix )
          TA_StringFree( stringCache, TA_StringFromChar(param->uirSuffix) );
 
-      TA_Free( libHandle, param );
+      TA_Free(  param );
    } 
 
    return TA_SUCCESS;
 }
 
-static TA_RetCode buildDictFromWebSite( TA_YahooIdx *idx, TA_Libc *libHandle, TA_CountryId countryId )
+static TA_RetCode buildDictFromWebSite( TA_YahooIdx *idx, TA_CountryId countryId )
 {
    TA_RetCode retCode;
    TA_WebPage *webPage;
    TA_StreamAccess *access;
-   unsigned int i;
+   unsigned int i, nbTableToSkip;
 
    TA_String *catString;
    TA_String *symString;
@@ -1531,15 +1557,68 @@ static TA_RetCode buildDictFromWebSite( TA_YahooIdx *idx, TA_Libc *libHandle, TA
 
    TA_TableParseOpaqueData opaqueData;
 
-   stringCache = TA_GetGlobalStringCache( libHandle );
+   stringCache = TA_GetGlobalStringCache();
    catString = NULL;
    symString = NULL;
 
    opaqueData.countryId = countryId;
    opaqueData.idx = idx;
       
-   retCode = TA_WebPageAlloc( libHandle, "biz.yahoo.com",
-                              "/i/",
+   /* Identify the server. */
+   switch( countryId )
+   {
+   case TA_Country_ID_US:
+   case TA_Country_ID_CA:
+      opaqueData.serverName = "biz.yahoo.com";
+      nbTableToSkip = 2;
+      break;
+   default:
+      /* All european index are integrated together, so just
+       * use the UK server.
+       */
+      opaqueData.serverName = "uk.biz.yahoo.com";
+      nbTableToSkip = 4;
+      break;
+   }
+
+   /* Identify the top page. */
+   switch( countryId )
+   {
+   case TA_Country_ID_US:
+   case TA_Country_ID_CA:
+      opaqueData.topIndex = "/i/";
+      break;
+   case TA_Country_ID_UK:
+      opaqueData.topIndex = "/p/uk/cpi/index.html";
+      break;
+   case TA_Country_ID_DE: /* Germany */
+      opaqueData.topIndex = "/p/de/cpi/index.html";
+      break;
+   case TA_Country_ID_DK: /* Denmark */
+      opaqueData.topIndex = "/p/dk/cpi/index.html";
+      break;
+   case TA_Country_ID_ES: /* Spain */
+      opaqueData.topIndex = "/p/es/cpi/index.html";
+      break;
+   case TA_Country_ID_FR: /* France */
+      opaqueData.topIndex = "/p/fr/cpi/index.html";
+      break;
+   case TA_Country_ID_IT: /* Italy */
+      opaqueData.topIndex = "/p/it/cpi/index.html";
+      break;
+   case TA_Country_ID_SE: /* Sweden */
+      opaqueData.topIndex = "/p/se/cpi/index.html";
+      break;
+   case TA_Country_ID_NO: /* Norway */
+      opaqueData.topIndex = "/p/no/cpi/index.html";
+      break;
+   default:
+      opaqueData.topIndex = "/i/";
+      break;
+   }
+
+   retCode = TA_WebPageAlloc( opaqueData.serverName,
+                              opaqueData.topIndex,
                               NULL, NULL,
                               &webPage, 2 );
 
@@ -1556,7 +1635,7 @@ static TA_RetCode buildDictFromWebSite( TA_YahooIdx *idx, TA_Libc *libHandle, TA
    access = TA_StreamAccessAlloc( webPage->content );
 
    /* Skip first the non-meaningful tables. */
-   for( i=0; i < 2; i++ )
+   for( i=0; i < nbTableToSkip; i++ )
    {
       retCode = TA_StreamAccessSkipHTMLTable( access );
       if( retCode != TA_SUCCESS )
@@ -1622,19 +1701,19 @@ Exit_buildPageList:
    return retCode;
 }
 
-static TA_RetCode processTopIndex( TA_Libc *libHandle, 
+static TA_RetCode processTopIndex( 
                                    unsigned int line,
                                    unsigned int column,
                                    const char *data,
                                    const char *href,
                                    void *opaqueData)
 {
+   TA_TableParseOpaqueData *tableParseInfo;
    TA_RetCode retCode;
    TA_WebPage *webPage;
    TA_StreamAccess *access;
-   unsigned int i;
+   unsigned int i, nbTableToSkip;
 
-   (void)opaqueData; /* Get ride of compiler warning. */
    (void)data; /* Get ride of compiler warning. */
    (void)column; /* Get ride of compiler warning. */
    (void)line; /* Get ride of compiler warning. */
@@ -1646,8 +1725,10 @@ static TA_RetCode processTopIndex( TA_Libc *libHandle,
 
    if( *href != '\0' )
    {
+      tableParseInfo = (TA_TableParseOpaqueData *)opaqueData;
+
       printf( "************* Processing Top Index [%s]\n", href );
-      retCode = TA_WebPageAlloc( libHandle, "biz.yahoo.com",
+      retCode = TA_WebPageAlloc( tableParseInfo->serverName,
                                  href,
                                  NULL, NULL,
                                  &webPage, 2 );
@@ -1655,19 +1736,31 @@ static TA_RetCode processTopIndex( TA_Libc *libHandle,
       if( retCode != TA_SUCCESS )
          goto Exit_processTopIndex;
 
-      retCode = addSymbolsFromWebPage( libHandle, webPage, opaqueData );
+      retCode = addSymbolsFromWebPage( webPage, opaqueData );
 
       /* retCode = TA_FINISH_TABLE; */
 
       if( retCode != TA_SUCCESS )
          goto Exit_processTopIndex;
-      
+
+      /* Now process all the "sub index" pages */
       access = TA_StreamAccessAlloc( webPage->content );
       if( retCode != TA_SUCCESS )
          goto Exit_processTopIndex;
 
       /* Skip first the non-meaningful tables. */
-      for( i=0; i < 3; i++ )
+      switch( tableParseInfo->countryId )
+      {
+      case TA_Country_ID_US:
+      case TA_Country_ID_CA:
+         nbTableToSkip = 3;
+         break;
+      default:
+         nbTableToSkip = 8;
+         break;
+      }
+
+      for( i=0; i < nbTableToSkip; i++ )
       {
          retCode = TA_StreamAccessSkipHTMLTable( access );
          if( retCode != TA_SUCCESS )
@@ -1698,17 +1791,17 @@ Exit_processTopIndex:
    return retCode;
 }
 
-static TA_RetCode processIndex( TA_Libc *libHandle, 
+static TA_RetCode processIndex( 
                                 unsigned int line,
                                 unsigned int column,
                                 const char *data,
                                 const char *href,
                                 void *opaqueData)
 {
+   TA_TableParseOpaqueData *tableParseInfo;
    TA_RetCode retCode;
    TA_WebPage *webPage;
 
-   (void)opaqueData; /* Get ride of compiler warning. */
    (void)data; /* Get ride of compiler warning. */
    (void)column; /* Get ride of compiler warning. */
    (void)line; /* Get ride of compiler warning. */
@@ -1719,19 +1812,35 @@ static TA_RetCode processIndex( TA_Libc *libHandle,
 
    if( *href != '\0' )
    {
+      tableParseInfo = (TA_TableParseOpaqueData *)opaqueData;
+
       /* Trap the case where the table does not appear to be right.
        * This may happen if there is no additional index
        * index on this page (Typically the page Y,Z)
        */
-      if( strncmp( "/i/", href, 3 ) != 0 )
+      switch( tableParseInfo->countryId )
       {
-         retCode = TA_FINISH_TABLE;
-         goto Exit_processIndex;
+      case TA_Country_ID_US:
+      case TA_Country_ID_CA:
+         if( strncmp( "/i/", href, 3 ) != 0 )
+         {
+            retCode = TA_FINISH_TABLE;
+            goto Exit_processIndex;
+         }
+         break;
+      default:         
+         if( (strncmp( "/p/", href, 3 ) != 0) || (strncmp( "uk/cpi/cpi", &href[3], 10) != 0) )
+         {
+            retCode = TA_FINISH_TABLE;
+            goto Exit_processIndex;
+         }
+         break;
       }
+
 
       printf( "Processing web page [%s]                                 \n", &href[3] );
 
-      retCode = TA_WebPageAlloc( libHandle, "biz.yahoo.com",
+      retCode = TA_WebPageAlloc( tableParseInfo->serverName,
                                  href,
                                  NULL, NULL,
                                  &webPage, 2 );
@@ -1739,7 +1848,7 @@ static TA_RetCode processIndex( TA_Libc *libHandle,
       if( retCode != TA_SUCCESS )
          goto Exit_processIndex;
 
-      retCode = addSymbolsFromWebPage( libHandle, webPage, opaqueData );
+      retCode = addSymbolsFromWebPage( webPage, opaqueData );
       if( retCode != TA_SUCCESS )
          goto Exit_processIndex;
    }
@@ -1751,13 +1860,13 @@ Exit_processIndex:
    return retCode;
 }
 
-static TA_RetCode addSymbolsFromWebPage( TA_Libc *libHandle, TA_WebPage *webPage, void *opaqueData )
+static TA_RetCode addSymbolsFromWebPage( TA_WebPage *webPage, void *opaqueData )
 {
    TA_RetCode retCode;
+   unsigned int i;
 
+   TA_TableParseOpaqueData *tableParseInfo;
    TA_StreamAccess *access;
-
-   (void)libHandle;
 
    if( !webPage )
       return TA_BAD_PARAM;
@@ -1766,11 +1875,41 @@ static TA_RetCode addSymbolsFromWebPage( TA_Libc *libHandle, TA_WebPage *webPage
    if( !access )
       return TA_ALLOC_ERR;
 
-   retCode = TA_StreamAccessSearch( access, "value=search" );
-   if( retCode != TA_SUCCESS )
+   /* Position on the table containing all the symbols. */
+   tableParseInfo = (TA_TableParseOpaqueData *)opaqueData;
+   switch( tableParseInfo->countryId )
    {
-      TA_StreamAccessFree( access );
-      return retCode;
+   case TA_Country_ID_US:
+   case TA_Country_ID_CA:
+      retCode = TA_StreamAccessSearch( access, "value=search" );
+      if( retCode != TA_SUCCESS )
+      {
+         TA_StreamAccessFree( access );
+         return retCode;
+      }
+      break;
+
+   default:
+      for( i=0; i < 8; i++ )
+      {
+         retCode = TA_StreamAccessSkipHTMLTable( access );
+         if( retCode != TA_SUCCESS )
+         {
+            TA_StreamAccessFree( access );
+            return retCode;
+         }
+      }
+
+      for( i=0; i < 2; i++ )
+      {
+         retCode = TA_StreamAccessSearch( access, "<p>" );
+         if( retCode != TA_SUCCESS )
+         {
+            TA_StreamAccessFree( access );
+            return retCode;
+         }
+      }
+      break;
    }
 
    /* Now parse the symbol table. */
@@ -1780,7 +1919,7 @@ static TA_RetCode addSymbolsFromWebPage( TA_Libc *libHandle, TA_WebPage *webPage
    return retCode;
 }
 
-static TA_RetCode addTheSymbolFromWebPage( TA_Libc *libHandle, 
+static TA_RetCode addTheSymbolFromWebPage( 
                                            unsigned int line,
                                            unsigned int column,
                                            const char *data,
@@ -1793,9 +1932,9 @@ static TA_RetCode addTheSymbolFromWebPage( TA_Libc *libHandle,
    TA_String *symbol;
    TA_StringCache *stringCache;
    const char *abbrev;
+   int allowOnlineProcessing;
 
    (void)line; /* Get ride of compiler warning. */
-   (void)libHandle;
    (void)href;
 
    if( column == 1 )
@@ -1805,9 +1944,21 @@ static TA_RetCode addTheSymbolFromWebPage( TA_Libc *libHandle,
          tableParseInfo = (TA_TableParseOpaqueData *)opaqueData;
 
          /* Convert from Yahoo! classification to the TA-LIB classification. */
-         retCode = TA_AllocStringFromYahooName( libHandle,
+
+         /* Go online only when processing US stocks. All other
+          * country have extension allowing to identify the
+          * exchange so there is no need to do additional online
+          * processign to identify the exchange.
+          */          
+         if( tableParseInfo->countryId == TA_Country_ID_US )
+            allowOnlineProcessing = 1;
+         else
+            allowOnlineProcessing = 0;
+
+         retCode = TA_AllocStringFromYahooName(
                                                 &defaultMarketDecoding,
-                                                data, &category, &symbol );
+                                                data, &category, &symbol,
+                                                allowOnlineProcessing );
 
          if( retCode != TA_SUCCESS && retCode != TA_INVALID_SECURITY_EXCHANGE )
             return retCode;
@@ -1820,7 +1971,7 @@ static TA_RetCode addTheSymbolFromWebPage( TA_Libc *libHandle,
             return TA_SUCCESS;
          }
 
-         stringCache = TA_GetGlobalStringCache( libHandle );
+         stringCache = TA_GetGlobalStringCache();
 
          /* Add only if of the requested country. */
          abbrev = TA_CountryIdToAbbrev(tableParseInfo->countryId);
@@ -1849,7 +2000,6 @@ static TA_RetCode buildIndexFromLocalCache( TA_YahooIdx *idx,
 {
    const char *cachePath;
    TA_YahooIdxHidden *idxHidden;
-   TA_Libc *libHandle;
    char *buffer;
    TA_Stream *stream;
    FILE *in;
@@ -1857,16 +2007,15 @@ static TA_RetCode buildIndexFromLocalCache( TA_YahooIdx *idx,
    int pathLength;
 
    idxHidden = (TA_YahooIdxHidden *)idx->hiddenData;
-   libHandle = idxHidden->libHandle;
 
-   cachePath = TA_GetLocalCachePath( libHandle );
+   cachePath = TA_GetLocalCachePath();
 
    if( !cachePath )
       return TA_YAHOO_IDX_EXPIRED;
    
    /* Open the file */
    pathLength = strlen( cachePath );
-   buffer = TA_Malloc( libHandle, pathLength + 11 );
+   buffer = TA_Malloc( pathLength + 11 );
    if( pathLength )
    {
       sprintf( buffer, "%s%cy_%c%c.dat",
@@ -1885,12 +2034,12 @@ static TA_RetCode buildIndexFromLocalCache( TA_YahooIdx *idx,
    /* printf( "Trying to open local [%s]\n", buffer ); */
 
    in = fopen( buffer, "rb" );
-   TA_Free( libHandle, buffer );
+   TA_Free(  buffer );
    if( !in )
       return TA_YAHOO_IDX_EXPIRED;
 
    /* Create a stream from the file. */
-   stream = TA_StreamAlloc( libHandle );
+   stream = TA_StreamAlloc();
    if( !stream )
       return TA_YAHOO_IDX_EXPIRED;
    retCode = TA_StreamAddFile( stream, in );

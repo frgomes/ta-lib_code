@@ -79,8 +79,7 @@ int TA_MEDPRICE_Lookback( void )
  * 
  */
 
-TA_RetCode TA_MEDPRICE( TA_Libc      *libHandle,
-                        TA_Integer    startIdx,
+TA_RetCode TA_MEDPRICE( TA_Integer    startIdx,
                         TA_Integer    endIdx,
                         const TA_Real inHigh_0[],
                         const TA_Real inLow_0[],
@@ -93,8 +92,6 @@ TA_RetCode TA_MEDPRICE( TA_Libc      *libHandle,
    int outIdx, i;
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
-
-   (void)libHandle; /* Get ride of warning if unused. */
 
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
@@ -118,14 +115,18 @@ TA_RetCode TA_MEDPRICE( TA_Libc      *libHandle,
 
    /* Insert TA function code here. */
 
-   /* Typical price = (High + Low ) / 2 */
+   /* MEDPRICE = (High + Low ) / 2 
+    * This is the high and low of the same price bar.
+    *
+    * See MIDPRICE to use instead the highest high and lowest
+    * low over multiple price bar.
+    */
 
    outIdx = 0;
 
    for( i=startIdx; i <= endIdx; i++ )
    {
-      outReal_0[outIdx++] = ( inHigh_0 [i] +
-                              inLow_0  [i] ) / 2;
+      outReal_0[outIdx++] = (inHigh_0[i]+inLow_0[i])/2.0;
    }
 
    *outNbElement = outIdx;

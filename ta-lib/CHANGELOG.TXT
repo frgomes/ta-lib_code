@@ -1,17 +1,28 @@
-V0.0.5 (June 2002)
-- Add performance measurement infrastructure.
-  Some basic measurements included: nb trade,
-  avg profit,annualized return, equity line...
+V0.0.8 (April 2003)
 
-- Add TA functions:
-   OBV : On-Balance-Volume
+- New TA Functions:
+    AROON          Aroon
+    AROONOSC       Aroon Oscillator
+    MAMA           MESA Adaptive Moving Average
+    KAMA           Kaufman Adaptive Moving Average
+    T3             Triple Exponential Moving Average
+    HT_TRENDLINE   Hilbert Transform - Instantaneous Trendline
+    HT_DCPERIOD    Hilbert Transform - Dominant Cycle Period
+    HT_DCPHASE     Hilbert Transform - Dominant Cycle Phase
+    HT_PHASOR      Hilbert Transform - Phasor Components
+    HT_SINE        Hilbert Transform - SineWave
+    HT_TRENDMODE   Hilbert Transform - Trend vs Cycle Mode
+    AD             Chaikin A/D Line
+    ADOSC          Chaikin A/D Oscillator
 
-- Now the Yahoo! data source retreive correctly all the data,
-  particularly for some canadian stock.
+  The Hilbert Transform functions are the ones found
+  in John F. Ehlers books "Rocket Science For Traders".
 
-- Correct a bug with TA_HistoryAlloc who was failing with
-  error 65535 when a subset of field was requested
-  (#537806 in the bug tracker)
+- MA types parameters have been changed, hopefully for the last time.
+
+- Fix #701060: Fix TA_TRIMA function. Thanks to Chris.
+
+- Excel shutdown logic corrected. Sync with latest XLW 1.2.2 release
 
 See HISTORY.TXT for summary of previous version.
 

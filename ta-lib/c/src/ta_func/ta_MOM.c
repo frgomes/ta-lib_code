@@ -85,8 +85,7 @@ int TA_MOM_Lookback( TA_Integer    optInTimePeriod_0 )  /* From 1 to TA_INTEGER_
  * 
  */
 
-TA_RetCode TA_MOM( TA_Libc      *libHandle,
-                   TA_Integer    startIdx,
+TA_RetCode TA_MOM( TA_Integer    startIdx,
                    TA_Integer    endIdx,
                    const TA_Real inReal_0[],
                    TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
@@ -101,8 +100,6 @@ TA_RetCode TA_MOM( TA_Libc      *libHandle,
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
 
-   (void)libHandle; /* Get ride of warning if unused. */
-
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
    /* Validate the requested output range. */
@@ -114,9 +111,9 @@ TA_RetCode TA_MOM( TA_Libc      *libHandle,
    /* Validate the parameters. */
    if( !inReal_0 ) return TA_BAD_PARAM;
    /* min/max are checked for optInTimePeriod_0. */
-   if( optInTimePeriod_0 == TA_INTEGER_DEFAULT )
+   if( (TA_Integer)optInTimePeriod_0 == TA_INTEGER_DEFAULT )
       optInTimePeriod_0 = 10;
-   else if( (optInTimePeriod_0 < 1) || (optInTimePeriod_0 > 2147483647) )
+   else if( ((TA_Integer)optInTimePeriod_0 < 1) || ((TA_Integer)optInTimePeriod_0 > 2147483647) )
       return TA_BAD_PARAM;
 
    if( outReal_0 == NULL )
@@ -127,6 +124,38 @@ TA_RetCode TA_MOM( TA_Libc      *libHandle,
 /**** END GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
 
    /* Insert TA function code here. */
+
+   /* The interpretation of the rate of change varies widely depending
+    * which software and/or books you are refering to.
+    *
+    * The following is the table of Rate-Of-Change implemented in TA-LIB:
+    *       MOM     = (price - prevPrice)         [Momentum]
+    *       ROC     = ((price/prevPrice)-1)*100   [Rate of change]
+    *       ROCP    = (price-prevPrice)/prevPrice [Rate of change Percentage]
+    *       ROCR    = (price/prevPrice)           [Rate of change ratio]
+    *       ROCR100 = (price/prevPrice)*100       [Rate of change ratio 100 Scale]
+    *
+    * Here are the equivalent function in other software:
+    *       TA-Lib  |   Tradestation   |    Metastock         
+    *       =================================================
+    *       MOM     |   Momentum       |    ROC (Point)
+    *       ROC     |   ROC            |    ROC (Percent)
+    *       ROCP    |   PercentChange  |    -     
+    *       ROCR    |   -              |    -
+    *       ROCR100 |   -              |    MO
+    *
+    * The MOM function is the only one who is not normalized, and thus
+    * should be avoided for comparing different time serie of prices.
+    * 
+    * ROC and ROCP are centered at zero and can have positive and negative
+    * value. Here are some equivalence:
+    *    ROC = ROCP/100 
+    *        = ((price-prevPrice)/prevPrice)/100
+    *        = ((price/prevPrice)-1)*100
+    *
+    * ROCR and ROCR100 are ratio respectively centered at 1 and 100 and are
+    * always positive values.
+    */
 
    /* Move up the start index if there is not
     * enough initial data.

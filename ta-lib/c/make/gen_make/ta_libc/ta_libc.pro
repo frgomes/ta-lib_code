@@ -18,7 +18,7 @@ csd:TARGET = ta_libc_csd
 csr:TARGET = ta_libc_csr
 
 # Output info
-VERSION     = 0.0.5
+VERSION     = 
 DESTDIR     = ../../../../../lib
 # File to process
 SOURCES = ../../../../../src/ta_data/ta_source/ta_ascii/ta_ascii.c \
@@ -81,6 +81,7 @@ SOURCES = ../../../../../src/ta_data/ta_source/ta_ascii/ta_ascii.c \
           ../../../../../src/ta_abstract/ta_abstract.c \
           ../../../../../src/ta_abstract/ta_def_ui.c \
           ../../../../../src/ta_abstract/ta_group_idx.c \
+          ../../../../../src/ta_abstract/frames/ta_frame.c \
           ../../../../../src/ta_abstract/tables/table_a.c \
           ../../../../../src/ta_abstract/tables/table_b.c \
           ../../../../../src/ta_abstract/tables/table_c.c \
@@ -107,62 +108,63 @@ SOURCES = ../../../../../src/ta_data/ta_source/ta_ascii/ta_ascii.c \
           ../../../../../src/ta_abstract/tables/table_x.c \
           ../../../../../src/ta_abstract/tables/table_y.c \
           ../../../../../src/ta_abstract/tables/table_z.c \
-          ../../../../../src/ta_abstract/frames/ta_MAX_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_MIN_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_BBANDS_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_DEMA_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_EMA_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_MA_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_SAR_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_SMA_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_TEMA_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_WMA_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_APO_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_MACD_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_MACDFIX_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_PPO_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_RSI_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_ATR_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_TRANGE_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_CCI_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_MOM_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_ROC_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_ROCR_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_STOCH_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_TRIX_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_OBV_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_STDDEV_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_VAR_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_MEDPRICE_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_TYPPRICE_frame.c \
-          ../../../../../src/ta_abstract/frames/ta_WCLPRICE_frame.c \
           ../../../../../src/ta_func/ta_utility.c \
           ../../../../../src/ta_func/ta_MAX.c \
           ../../../../../src/ta_func/ta_MIN.c \
           ../../../../../src/ta_func/ta_BBANDS.c \
           ../../../../../src/ta_func/ta_DEMA.c \
           ../../../../../src/ta_func/ta_EMA.c \
+          ../../../../../src/ta_func/ta_HT_TRENDLINE.c \
+          ../../../../../src/ta_func/ta_KAMA.c \
           ../../../../../src/ta_func/ta_MA.c \
+          ../../../../../src/ta_func/ta_MAMA.c \
+          ../../../../../src/ta_func/ta_MIDPRICE.c \
+          ../../../../../src/ta_func/ta_MIDPOINT.c \
           ../../../../../src/ta_func/ta_SAR.c \
           ../../../../../src/ta_func/ta_SMA.c \
+          ../../../../../src/ta_func/ta_T3.c \
           ../../../../../src/ta_func/ta_TEMA.c \
+          ../../../../../src/ta_func/ta_TRIMA.c \
           ../../../../../src/ta_func/ta_WMA.c \
-          ../../../../../src/ta_func/ta_APO.c \
-          ../../../../../src/ta_func/ta_MACD.c \
-          ../../../../../src/ta_func/ta_MACDFIX.c \
-          ../../../../../src/ta_func/ta_PPO.c \
-          ../../../../../src/ta_func/ta_RSI.c \
           ../../../../../src/ta_func/ta_ATR.c \
           ../../../../../src/ta_func/ta_TRANGE.c \
+          ../../../../../src/ta_func/ta_ADX.c \
+          ../../../../../src/ta_func/ta_ADXR.c \
+          ../../../../../src/ta_func/ta_APO.c \
+          ../../../../../src/ta_func/ta_AROON.c \
+          ../../../../../src/ta_func/ta_AROONOSC.c \
           ../../../../../src/ta_func/ta_CCI.c \
+          ../../../../../src/ta_func/ta_DX.c \
+          ../../../../../src/ta_func/ta_MACD.c \
+          ../../../../../src/ta_func/ta_MACDEXT.c \
+          ../../../../../src/ta_func/ta_MACDFIX.c \
+          ../../../../../src/ta_func/ta_MFI.c \
+          ../../../../../src/ta_func/ta_MINUS_DI.c \
+          ../../../../../src/ta_func/ta_MINUS_DM.c \
           ../../../../../src/ta_func/ta_MOM.c \
+          ../../../../../src/ta_func/ta_PPO.c \
+          ../../../../../src/ta_func/ta_PLUS_DI.c \
+          ../../../../../src/ta_func/ta_PLUS_DM.c \
           ../../../../../src/ta_func/ta_ROC.c \
+          ../../../../../src/ta_func/ta_ROCP.c \
           ../../../../../src/ta_func/ta_ROCR.c \
+          ../../../../../src/ta_func/ta_ROCR100.c \
+          ../../../../../src/ta_func/ta_RSI.c \
           ../../../../../src/ta_func/ta_STOCH.c \
+          ../../../../../src/ta_func/ta_STOCHF.c \
           ../../../../../src/ta_func/ta_TRIX.c \
+          ../../../../../src/ta_func/ta_WILLR.c \
+          ../../../../../src/ta_func/ta_HT_DCPERIOD.c \
+          ../../../../../src/ta_func/ta_HT_DCPHASE.c \
+          ../../../../../src/ta_func/ta_HT_PHASOR.c \
+          ../../../../../src/ta_func/ta_HT_SINE.c \
+          ../../../../../src/ta_func/ta_HT_TRENDMODE.c \
+          ../../../../../src/ta_func/ta_AD.c \
+          ../../../../../src/ta_func/ta_ADOSC.c \
           ../../../../../src/ta_func/ta_OBV.c \
           ../../../../../src/ta_func/ta_STDDEV.c \
           ../../../../../src/ta_func/ta_VAR.c \
+          ../../../../../src/ta_func/ta_AVGPRICE.c \
           ../../../../../src/ta_func/ta_MEDPRICE.c \
           ../../../../../src/ta_func/ta_TYPPRICE.c \
           ../../../../../src/ta_func/ta_WCLPRICE.c \
@@ -198,7 +200,6 @@ INCLUDEPATH *= ../../../../../src/ta_abstract/tables
 INCLUDEPATH *= ../../../../../src/ta_abstract/frames
 INCLUDEPATH *= ../../../../../include
 INCLUDEPATH *= ../../../../../src/ta_common
-INCLUDEPATH *= \n
 INCLUDEPATH *= ../../../../../include
 INCLUDEPATH *= ../../../../../src/ta_common
 INCLUDEPATH *= ../../../../../src/ta_pm

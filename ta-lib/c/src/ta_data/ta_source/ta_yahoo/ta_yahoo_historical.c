@@ -51,6 +51,8 @@
  *    Get historical data from the Yahoo! Web Site. 
  */
 
+/* #define DEBUG_PRINTF 1 */
+
 /**** Headers ****/
 #include <stdlib.h>
 #include <string.h>
@@ -107,12 +109,20 @@ static void buildUIRSuffix( const UIRSuffixParsing *parsedString,
                             TA_Timestamp *endTimestamp,
                             char *output );
 
+static int isGapAcceptable( TA_Timestamp *lastBarTimestampAdded,
+                            TA_Timestamp *lastBarTimestamp );
+
+static unsigned int TA_DateWithinRange( unsigned int year,
+                                        unsigned int month,
+                                        unsigned int day,
+                                        const TA_Timestamp *t1,
+                                        const TA_Timestamp *t2 );
+
 /**** Local variables definitions.     ****/
 TA_FILE_INFO;
 
 /**** Global functions definitions.   ****/
-TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
-                                     TA_DataSourceHandle *handle,
+TA_RetCode TA_GetHistoryDataFromWeb( TA_DataSourceHandle *handle,
                                      TA_CategoryHandle   *categoryHandle,
                                      TA_SymbolHandle     *symbolHandle,
                                      TA_Period            period,
@@ -121,7 +131,7 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
                                      TA_Field             fieldToAlloc,
                                      TA_ParamForAddData  *paramForAddData )
 {
-   TA_PROLOG;
+   TA_PROLOG
 
    TA_RetCode retCode;
    TA_StringCache *stringCache;
@@ -134,39 +144,52 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
    TA_ReadOpInfo *readOpInfo;
    UIRSuffixParsing suffixParsing;
    TA_Timestamp firstBarTimestamp, lastBarTimestamp, prevEndDate;
+   TA_InfoFromAddedData infoFromAddedData;
+   TA_DayOfWeek dayOfWeek;
 
    int nbEstimateBar;
    int nbField;
-   unsigned int nbTotalBarAdded;
+   unsigned int nbBarAdded, nbTotalBarAdded;
    int again, firstTime, nbBatch;
    int zeroBarAddedAttempt;
 
-   TA_TRACE_BEGIN( libHandle, TA_GetHistoryDataFromWeb );
+   TA_TRACE_BEGIN(  TA_GetHistoryDataFromWeb );
 
    /* Initialize some local variables. */
-   stringCache   = TA_GetGlobalStringCache( libHandle );
+   stringCache   = TA_GetGlobalStringCache();
    yahooHandle   = (TA_PrivateYahooHandle *)handle->opaqueData;
    readOpInfo    = NULL;
    nbEstimateBar = 0;
 
-   TA_ASSERT( libHandle, categoryHandle != NULL );
-   TA_ASSERT( libHandle, symbolHandle != NULL );
-   TA_ASSERT( libHandle, categoryHandle->string != NULL );
-   TA_ASSERT( libHandle, symbolHandle->string != NULL );
+   TA_ASSERT( categoryHandle != NULL );
+   TA_ASSERT( symbolHandle != NULL );
+   TA_ASSERT( categoryHandle->string != NULL );
+   TA_ASSERT( symbolHandle->string != NULL );
 
    /* Set the initial first/last timestamp */
    if( start )
       TA_TimestampCopy( &firstBarTimestamp, start );
    else
+   {
       TA_SetDate( 1950, 1, 1, &firstBarTimestamp );
+      TA_SetTime( 0, 0, 0, &firstBarTimestamp );
+   }
 
    if( end )
       TA_TimestampCopy( &lastBarTimestamp, end );
    else
+   {
       TA_SetDateNow( &lastBarTimestamp );
+      TA_SetTime( 0, 0, 0, &lastBarTimestamp );
+   }
+
+   /* Make sure that lastBarTimestamp is a week-day. */
+   dayOfWeek = TA_GetDayOfTheWeek( &lastBarTimestamp );
+   if( (dayOfWeek == TA_SUNDAY) || (dayOfWeek == TA_SATURDAY) )
+      TA_PrevWeekday( &lastBarTimestamp );
 
    /* Map the TA-Lib name into the Yahoo! name. */
-   retCode = TA_AllocStringFromLibName( libHandle,
+   retCode = TA_AllocStringFromLibName(
                                         categoryHandle->string,
                                         symbolHandle->string,
                                         &yahooName );  
@@ -175,15 +198,15 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
       TA_TRACE_RETURN( retCode );
    }
 
-   TA_ASSERT( libHandle, yahooName != NULL );
-   TA_ASSERT( libHandle, yahooHandle != NULL );
+   TA_ASSERT( yahooName != NULL );
+   TA_ASSERT( yahooHandle != NULL );
 
    /* Get the decoding parameter for the CSV web page. */
    decodingParam = TA_YahooIdxDecodingParam( yahooHandle->index, TA_YAHOOIDX_CVS_PAGE );
    if( !decodingParam )
    {
       TA_StringFree( stringCache, yahooName );
-      TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+      TA_TRACE_RETURN( TA_INTERNAL_ERROR(103) );
    }
 
    /* Use a local copy of the decoding param. 
@@ -201,11 +224,11 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
        */
       /* Clean-up and exit */
       TA_StringFree( stringCache, yahooName );
-      TA_TRACE_RETURN( TA_UNKNOWN_ERR );
+      TA_TRACE_RETURN( TA_INTERNAL_ERROR(104) );
    }
 
    /* Replace the uirSuffix with a large local buffer. */
-   localDecodingParam.uirSuffix = TA_Malloc( libHandle, suffixParsing.maxTotalLength );
+   localDecodingParam.uirSuffix = TA_Malloc( suffixParsing.maxTotalLength );
    if( !localDecodingParam.uirSuffix )
    {
       /* Clean-up and exit */
@@ -231,9 +254,20 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
 
    again = 1;
    firstTime = 1;
+   nbTotalBarAdded = 0;
    while( again && (++nbBatch < 100) && (zeroBarAddedAttempt < 10) )
-   {      
-      retCode = TA_WebPageAllocFromYahooName( libHandle,
+   {  
+    
+      if( TA_TimestampLess(&lastBarTimestamp,&firstBarTimestamp) )
+      {
+          /* Get out of this loop if all the requested data
+           * has been retreived already.
+           */
+         again = 0;
+         break;
+      }   
+
+      retCode = TA_WebPageAllocFromYahooName(
                                               &localDecodingParam,
                                               TA_StringToChar(yahooName),
                                               &webPage );
@@ -241,20 +275,20 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
       if( retCode != TA_SUCCESS )
       {
          TA_StringFree( stringCache, yahooName );
-         TA_Free( libHandle, (char *)localDecodingParam.uirSuffix );
+         TA_Free(  (char *)localDecodingParam.uirSuffix );
          TA_TRACE_RETURN( retCode );
       }
 
       /* Disguise the webPage stream into a "file". That way the speed
        * optimized ASCII decoder can be re-used (TA_ReadOp stuff).
        */
-      retCode = TA_FileSeqOpenFromStream( libHandle, webPage->content, &fileHandle );
+      retCode = TA_FileSeqOpenFromStream( webPage->content, &fileHandle );
       if( retCode != TA_SUCCESS )
       {
          /* Clean-up and exit */
          TA_StringFree( stringCache, yahooName );
          TA_WebPageFree( webPage );
-         TA_Free( libHandle, (char *)localDecodingParam.uirSuffix );
+         TA_Free(  (char *)localDecodingParam.uirSuffix );
          TA_TRACE_RETURN( retCode );
       }
 
@@ -293,7 +327,7 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
          }
 
          /* Optimize the read op for the requested data. */
-         retCode = TA_ReadOp_Optimize( libHandle,
+         retCode = TA_ReadOp_Optimize(
                                        readOpInfo,
                                        period,
                                        fieldToAlloc );
@@ -302,7 +336,7 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
             /* Clean-up and exit */
             TA_StringFree( stringCache, yahooName );
             TA_WebPageFree( webPage );
-            TA_Free( libHandle, (char *)localDecodingParam.uirSuffix );
+            TA_Free(  (char *)localDecodingParam.uirSuffix );
             TA_TRACE_RETURN( retCode );
          }
 
@@ -313,52 +347,87 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
       }
 
       /* Interpret the CSV data. */
-      retCode = TA_ReadOp_Do( libHandle, fileHandle,                           
+      retCode = TA_ReadOp_Do( fileHandle,                           
                               readOpInfo,
-                              period, start, end,
+                              period, &firstBarTimestamp, &lastBarTimestamp,
                               nbEstimateBar, fieldToAlloc,
                               paramForAddData,
-                              &nbTotalBarAdded,
-                              &lastBarTimestamp );
+                              &nbBarAdded );
 
-      TA_FileSeqClose( libHandle, fileHandle );
+      TA_FileSeqClose( fileHandle );
       TA_WebPageFree( webPage );
 
-      /* printf( "NB TOTAL BAR ADDED=%d\n", nbTotalBarAdded );*/
+      nbTotalBarAdded += nbBarAdded;
 
-      /* Request the data up to the day BEFORE
-       * the last batch of data received.
-       */
-      TA_PrevDay( &lastBarTimestamp );
+      if( retCode != TA_SUCCESS )
+      {
+         /* Clean-up and exit */
+         TA_StringFree( stringCache, yahooName );
+         TA_Free(  (char *)localDecodingParam.uirSuffix );
+         TA_TRACE_RETURN( retCode );
+      }
+
+      /* Yahoo! does not always return all the data it could, up to
+       * the requested end date. It is important to detect these occurence
+       * and cancel the usage of all data accumulated up to now. 
+       */      
+      TA_GetInfoFromAddedData( paramForAddData, &infoFromAddedData );
+      if( infoFromAddedData.barAddedSinceLastCall )
+      {
+         /* Do some more checking by considering holidays, week-end etc... */
+         if( !isGapAcceptable(&infoFromAddedData.highestTimestampAddedSinceLastCall, &lastBarTimestamp) )
+         {
+            /* Clean-up and exit */
+            TA_StringFree( stringCache, yahooName );
+            TA_Free(  (char *)localDecodingParam.uirSuffix );
+            TA_TRACE_RETURN( TA_DATA_GAP );
+         }
+         
+         TA_TimestampCopy( &lastBarTimestamp, &infoFromAddedData.lowestTimestamp );
+      }
+
+      #if DEBUG_PRINTF
+      printf( "NB BAR ADDED=%d, TOTAL=%d\n", nbBarAdded, nbTotalBarAdded );
+      #endif
 
       /* Verify if more data should be processed. 
        * Yahoo! sometimes slice their data, in 
        * batch of 200 price bars. 
        */
-      if( firstTime && nbTotalBarAdded > 200 )
+      if( firstTime && (nbBarAdded > 200) )
       {
-         again = 0; /* All data extracted... exit the loop. */
+         again = 0; /* Assume all the data extracted... exit the loop. */
       }
-      else if( nbTotalBarAdded == 0 )
+      else if( nbBarAdded == 0 )
       {
          /* Make multiple attempts when retreiving data succeed,
-          * but somehow there is zero bar returned. Yahoo! somehow
-          * do not return data for no apparent reason.
+          * but somehow there is zero bar returned. 
+          *
+          * Sometimes this might be correct when there is truly no
+          * more data available, so choosing an algorithm before
+          * giving up is a comprimise between reliability and
+          * usability. The data source is free... and you get
+          * what you pay for after all ;)
           */
-         /*if( zeroBarAddedAttempt > 0 )
-            TA_Sleep(zeroBarAddedAttempt*2);*/
+         if( (nbTotalBarAdded < 1000) && (zeroBarAddedAttempt >= 1) && (zeroBarAddedAttempt < 7) )
+         {
+            /* I did choose to add a delay when insufficient total data is returned. When
+             * there is already ~5 years of data, most likely there is "Zero" returned
+             * because there is NO more data available, so just do the retry without delay.
+             */
+            TA_Sleep(zeroBarAddedAttempt*2);
+         }
+
+         #if DEBUG_PRINTF
+         printf( "Retry %d", zeroBarAddedAttempt );
+         #endif
+
          zeroBarAddedAttempt++;
-      }
-      else if( TA_TimestampLess(&lastBarTimestamp,&firstBarTimestamp) )
-      {
-          /* Return if all the requested data
-           * has been retreived already.
-           */
-         again = 0;
       }
       else
       {
          zeroBarAddedAttempt = 0;
+
          if( TA_TimestampEqual( &lastBarTimestamp, &prevEndDate ) )
          {
             /* prevEndDate is a "safety net" to
@@ -366,11 +435,21 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
              * to return always the same batch of data.
              * Just ignore the repetitive data and exit.
              */
-            TA_Free( libHandle, (char *)localDecodingParam.uirSuffix );
+            TA_Free(  (char *)localDecodingParam.uirSuffix );
             TA_StringFree( stringCache, yahooName );
             TA_TRACE_RETURN( TA_SUCCESS );
          }
          TA_TimestampCopy( &prevEndDate, &lastBarTimestamp );
+
+         /* Request the data up to the day BEFORE
+          * the last batch of data received.
+          */
+         TA_PrevDay( &lastBarTimestamp );
+
+         /* Make sure that lastBarTimestamp is a week-day. */
+         dayOfWeek = TA_GetDayOfTheWeek( &lastBarTimestamp );
+         if( (dayOfWeek == TA_SUNDAY) || (dayOfWeek == TA_SATURDAY) )
+            TA_PrevWeekday( &lastBarTimestamp );
 
          /* Change the dates in the uirSuffix. */
          buildUIRSuffix( &suffixParsing,
@@ -387,7 +466,7 @@ TA_RetCode TA_GetHistoryDataFromWeb( TA_Libc *libHandle,
    }
 
    /* Clean-up and exit */
-   TA_Free( libHandle, (char *)localDecodingParam.uirSuffix );
+   TA_Free(  (char *)localDecodingParam.uirSuffix );
    TA_StringFree( stringCache, yahooName );
    TA_TRACE_RETURN( retCode );
 }
@@ -505,13 +584,13 @@ static void buildUIRSuffix( const UIRSuffixParsing *parsedString,
                             char *output )
 {  
    int i;
-   /* printf( "buildUIR\n" );*/
+
    strncpy( output, parsedString->part1, parsedString->part1Length );
    i = parsedString->part1Length;
 
    sprintf( output,
             "&a=%02d&b=%02d&c=%04d",
-            TA_GetMonth( startTimestamp ),
+            TA_GetMonth( startTimestamp )-1, /* Yahoo! month is zero base */
             TA_GetDay( startTimestamp ),
             TA_GetYear( startTimestamp ) );
    i += 17;
@@ -521,7 +600,7 @@ static void buildUIRSuffix( const UIRSuffixParsing *parsedString,
 
    sprintf( &output[i],
             "&d=%02d&e=%02d&f=%04d",
-            TA_GetMonth( endTimestamp ),
+            TA_GetMonth( endTimestamp )-1, /* Yahoo! month is zero base */
             TA_GetDay( endTimestamp ),
             TA_GetYear( endTimestamp ) );
    i += 17;
@@ -530,7 +609,10 @@ static void buildUIRSuffix( const UIRSuffixParsing *parsedString,
    i += parsedString->part3Length;
 
    output[i] = '\0';
-   /*printf( "New UIR=[%s]\n", output );*/
+
+   #if DEBUG_PRINTF
+   printf( "New UIR=[%s]\n", output );
+   #endif
 }
 
 static unsigned int nbCommaField( TA_Stream *csvFile )
@@ -568,4 +650,90 @@ static unsigned int nbCommaField( TA_Stream *csvFile )
 #ifdef WIN32
 #pragma warning( default : 4127 ) /* Restore warning settings. */
 #endif
+}
+
+static int isGapAcceptable( TA_Timestamp *lastBarTimestampAdded,
+                            TA_Timestamp *lastBarTimestamp )
+{
+   TA_RetCode retCode;
+   unsigned int deltaDay, i;
+
+   /* Verify if that gap in the data is acceptable. This is not
+    * a "perfect" algorithm, but the idea is to avoid obvious
+    * failure. Small failure might get through, but the consequence
+    * won't be worst than a long week-end gap.
+    */
+
+   retCode = TA_TimestampDeltaDay( lastBarTimestampAdded, lastBarTimestamp, &deltaDay );
+   if( (retCode != TA_SUCCESS) || (deltaDay >= 7) )
+   {
+      /* A gap of more than 7 days is an error for sure. Or may be the symbol
+       * is not being traded anymore? Don't take a chance and return an error.
+       */
+      return 0;
+   }
+
+   /* The gap should not be more than 3 weekdays (after removing special case) */
+   retCode = TA_TimestampDeltaWeekday( lastBarTimestampAdded, lastBarTimestamp, &deltaDay );
+   if(  retCode != TA_SUCCESS ) 
+   {
+      return 0;
+   }
+
+   /* Handle special cases */
+
+   /* Trading were suspended on many exchange on september 11 2001 to september 14 2001  */
+   for( i=11; i <= 14; i++ )
+   {
+      if( TA_DateWithinRange( 2001,9,i, lastBarTimestampAdded, lastBarTimestamp ) )
+         --deltaDay;
+   }
+      
+   
+   /* Handling holidays would be better here, any volunteer to implement this? */
+   if( deltaDay > 3 )
+      return 0;
+
+   return 1; /* The gap is acceptable. */
+}
+
+/* Check if t0 is within the provided [t1..t2] range (inclusive check) */
+static unsigned int TA_DateWithinRange( unsigned int year,
+                                        unsigned int month,
+                                        unsigned int day,
+                                        const TA_Timestamp *t1,
+                                        const TA_Timestamp *t2 )
+{
+   TA_Timestamp stamp;
+   const TA_Timestamp *lowBorder;
+   const TA_Timestamp *highBorder;
+
+   /* Inverse t1 and t2 if not chronilogical order. */
+   if( TA_TimestampLess( t2, t1 ) )
+   {
+      lowBorder = t2;
+      highBorder = t1;
+   }
+   else
+   {
+      lowBorder = t1;
+      highBorder = t2;
+   }
+
+   /* Build a timestamp for the date to be check */
+   TA_SetDate( year, month, day, &stamp );  
+
+   /* Check if exactly on boundary */
+   if( TA_TimestampEqual( &stamp, lowBorder ) && TA_TimestampEqual( &stamp, highBorder ) )
+   {
+      return 1;
+   }
+
+   /* Check if within range. */
+   if( TA_TimestampGreater( &stamp, lowBorder ) && TA_TimestampLess( &stamp, highBorder ) )
+   {
+      return 1;
+   }
+
+   return 0; /* Out-of-range */
 }

@@ -17,7 +17,11 @@ DESTDIR     = ../../../../../bin
 
 # Files to process
 SOURCES	= ../../../../../src/tools/ta_regtest/ta_regtest.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_1in_1out.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_1in_2out.c \
           ../../../../../src/tools/ta_regtest/test_ascii.c \
+          ../../../../../src/tools/ta_regtest/test_internals.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_adx.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_bbands.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_ma.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_macd.c \
@@ -25,11 +29,14 @@ SOURCES	= ../../../../../src/tools/ta_regtest/ta_regtest.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_minmax.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_mom.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_per_ema.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_per_hl.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_per_hlc.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_per_hlcv.c \
           ../../../../../src/tools/ta_regtest/test_period.c \
           ../../../../../src/tools/ta_regtest/test_pm.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_po.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_rsi.c \
+          ../../../../../src/tools/ta_regtest/ta_test_func/test_sar.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_stddev.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_stoch.c \
           ../../../../../src/tools/ta_regtest/ta_test_func/test_trange.c \

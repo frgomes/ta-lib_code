@@ -14,9 +14,10 @@ ErrorNumber test_ascii ( void );
 ErrorNumber test_yahoo ( void );
 ErrorNumber test_pm    ( void );
 ErrorNumber test_datasource_merge( void );
+ErrorNumber test_internals( void );
 
-ErrorNumber freeLib( TA_Libc *libHandle, TA_UDBase  *uDBase );
-ErrorNumber allocLib( TA_Libc **libHandlePtr, TA_UDBase **uDBasePtr );
+ErrorNumber freeLib( TA_UDBase  *uDBase );
+ErrorNumber allocLib( TA_UDBase **uDBasePtr );
 
 void reportError( const char *str, TA_RetCode retCode );
 
@@ -110,7 +111,7 @@ ErrorNumber checkExpectedValue( const TA_Real *data,
 
 #define CLEAR_EXPECTED_VALUE(id) \
    { \
-      retCode = TA_UNKNOWN_ERR; \
+      retCode = TA_INTERNAL_ERROR(127); \
       outBegIdx = 0;\
       outNbElement = 0;\
    }
@@ -137,8 +138,7 @@ ErrorNumber checkExpectedValue( const TA_Real *data,
 #define MAX_RANGE_SIZE 252
 #define MAX_RANGE_END  (MAX_RANGE_SIZE-1)
 
-typedef TA_RetCode (*RangeTestFunction)( TA_Libc *libHandle, 
-                                         TA_Integer startIdx,
+typedef TA_RetCode (*RangeTestFunction)( TA_Integer startIdx,
                                          TA_Integer endIdx,
                                          TA_Real *outputBuffer,
                                          TA_Integer *outBegIdx,
@@ -147,11 +147,43 @@ typedef TA_RetCode (*RangeTestFunction)( TA_Libc *libHandle,
                                          void *opaqueData,
                                          unsigned int outputNb );
 
-ErrorNumber doRangeTest( TA_Libc *libHandle,
-                         RangeTestFunction testFunction,
+/* This is the function starting the range tests.
+ * The parameter 'nbOutput' allows to repeat the
+ * tests indepedently for each outputs.
+ *
+ * A lot of coherency tests are performed,
+ * including comparing that the same value are
+ * returned even when using a different startIdx
+ * and endIdx.
+ *
+ * Because of the complexity added by algorithm that
+ * have an unstable period, the comparison is
+ * done using a tolerance algorithm (see test_util.c).
+ *
+ * Comparison can be ignored by specifiying 
+ * an integerTolerance == TA_DO_NOT_COMPARE
+ *
+ * Even without comparison, a lot of coherency
+ * tests are still performed (like making sure the
+ * lookback function is coherent with its TA function).
+ *
+ * In the case that the TA function output are
+ * integer, the integerTolerance indicate by how much
+ * the value can vary for a function having an
+ * unstable period. Example: If 2 is pass, the
+ * value can vary of no more or less 2.
+ * When passing zero, the tolerance is done using
+ * a "reasonable" logic using double calculation (see
+ * test_util.c for more info).
+ */
+#define TA_DO_NOT_COMPARE 0xFFFFFFFF
+ErrorNumber doRangeTest( RangeTestFunction testFunction,
                          TA_FuncUnstId unstId,
                          void *opaqueData,
-                         unsigned int nbOutput );
+                         unsigned int nbOutput,
+                         unsigned int integerTolerance );
+
+
 
 /* Compare two TA_Real and verify that they are
  * identiqual within the specified epsilon.

@@ -104,13 +104,13 @@ int print_data( TA_UDBase *udb,
                              TA_GetDay(&history->timestamp[i]),
                              TA_GetYear(&history->timestamp[i]) );
          if( history->open )
-            printf( ",%f", history->open[i] );
+            printf( ",%.2f", history->open[i] );
          if( history->high )
-            printf( ",%f", history->high[i] );
+            printf( ",%.2f", history->high[i] );
          if( history->low )
-            printf( ",%f", history->low[i] );
+            printf( ",%.2f", history->low[i] );
          if( history->close )
-            printf( ",%f", history->close[i] );
+            printf( ",%.2f", history->close[i] );
          if( history->volume )
             printf( ",%d", history->volume[i] );
          printf( "\n" );
@@ -130,7 +130,7 @@ int print_categories( TA_UDBase *udb )
    TA_AddDataSourceParam addYahooParam;
    unsigned int i;
    TA_StringTable *table;
-   const char *listCountry[] = {"US","CA",NULL};
+   const char *listCountry[] = {"US","CA","UK","DE","ES","FR","IT","NO","SE","DK",NULL};
 
    memset( &addYahooParam, 0, sizeof( TA_AddDataSourceParam ) );
    addYahooParam.id = TA_YAHOO_WEB;
@@ -195,7 +195,7 @@ int print_symbols( TA_UDBase *udb,
    for( i=0; i < table->size; i++ )
    {
       /* Display all categories... except the default one. */
-      if( strcmp( table->string[i], "ZZZ.OTHER.OTHER" ) )
+      if( strcmp( table->string[i], "ZZ.OTHER.OTHER" ) )
          printf( "%s\n", table->string[i] );
    }
 
@@ -208,7 +208,6 @@ int main( int argc, char *argv[] )
 {
    Action theAction;
    TA_InitializeParam initParam;
-   TA_Libc *libHandle;
    TA_UDBase *udb;
    TA_RetCode retCode;
    TA_Period period;
@@ -318,18 +317,18 @@ int main( int argc, char *argv[] )
    memset( &initParam, 0, sizeof( TA_InitializeParam ) );
    initParam.userLocalDrive = ".";
 
-   retCode = TA_Initialize( &libHandle, &initParam );
+   retCode = TA_Initialize( &initParam );
    if( retCode != TA_SUCCESS )
    {
       print_error( retCode );
       return -1;
    }
 
-   retCode = TA_UDBaseAlloc( libHandle, &udb );
+   retCode = TA_UDBaseAlloc( &udb );
    if( retCode != TA_SUCCESS )
    {
       print_error( retCode );
-      TA_Shutdown( libHandle );
+      TA_Shutdown();
       return -1;
    }
 
@@ -376,6 +375,6 @@ int main( int argc, char *argv[] )
 
    /* Clean-up and exit. */
    TA_UDBaseFree( udb );
-   TA_Shutdown( libHandle );
+   TA_Shutdown();
    return retValue;
 }

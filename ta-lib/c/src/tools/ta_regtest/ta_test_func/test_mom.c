@@ -47,18 +47,38 @@
  */
 
 /* Description:
- *     Test the simple momentum functions (MOM, ROC, ROCR).
+ *     Test the momentum functions
  *
- *     TA-Lib:
- *       MOM  = price - prevPrice           [Momentum]
- *       ROC  = ((price/prevPrice)-1)*100   [Rate of change]
- *       ROCR = (price/prevPrice)*100       [Rate of change ratio]
+ * The interpretation of the rate of change varies widely depending
+ * which software and/or books you are refering to.
  *
- *     Tradestation       Metastock         TA-Lib
- *     ROC                P-ROC (Percent)   ROC
- *     MOM                P-ROC (Point)     MOM
- *     -                  MOM               ROCR (R for ratio)
+ * The following is the table of Rate-Of-Change implemented in TA-LIB:
+ *       MOM     = (price - prevPrice)         [Momentum]
+ *       ROC     = ((price/prevPrice)-1)*100   [Rate of change]
+ *       ROCP    = (price-prevPrice)/prevPrice [Rate of change Percentage]
+ *       ROCR    = (price/prevPrice)           [Rate of change ratio]
+ *       ROCR100 = (price/prevPrice)*100       [Rate of change ratio 100 Scale]
  *
+ * Here are the equivalent function in other software:
+ *       TA-Lib  |   Tradestation   |    Metastock         
+ *       =================================================
+ *       MOM     |   Momentum       |    ROC (Point)
+ *       ROC     |   ROC            |    ROC (Percent)
+ *       ROCP    |   PercentChange  |    -     
+ *       ROCR    |   -              |    -
+ *       ROCR100 |   -              |    MO
+ *
+ * The MOM function is the only one who is not normalized, and thus
+ * should be avoided for comparing different time serie of prices.
+ * 
+ * ROC and ROCP are centered at zero and can have positive and negative
+ * value. Here are some equivalence:
+ *    ROC = ROCP/100 
+ *        = ((price-prevPrice)/prevPrice)/100
+ *        = ((price/prevPrice)-1)*100
+ *
+ * ROCR and ROCR100 are ratio respectively centered at 1 and 100 and are
+ * always positive values.
  */
 
 /**** Headers ****/
@@ -82,7 +102,9 @@
 typedef enum {
 TA_MOM_TEST,
 TA_ROC_TEST,
-TA_ROCR_TEST } TA_TestId;
+TA_ROCP_TEST,
+TA_ROCR_TEST,
+TA_ROCR100_TEST } TA_TestId;
 
 typedef struct
 {
@@ -110,8 +132,7 @@ typedef struct
 } TA_RangeTestParam;
 
 /**** Local functions declarations.    ****/
-static ErrorNumber do_test( TA_Libc *libHandle,
-                            const TA_History *history,
+static ErrorNumber do_test( const TA_History *history,
                             const TA_Test *test );
 
 /**** Local variables definitions.     ****/
@@ -121,15 +142,18 @@ static TA_Test tableTest[] =
    /**********************/
    /*      MOM TEST      */
    /**********************/
-   { 1, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS,      0, -0.50,  14,  252-14 }, /* First Value */
-   { 0, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS,      1, -2.00,  14,  252-14 },
-   { 0, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS,      2, -5.22,  14,  252-14 },
-   { 0, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS, 252-15, -1.13,  14,  252-14 },  /* Last Value */
 
+#ifndef TA_FUNC_NO_RANGE_CHECK
    /* Test out of range. */
    { 0, TA_MOM_TEST, -1, 3, 14, TA_OUT_OF_RANGE_START_INDEX, 0, 0, 0, 0},
    { 0, TA_MOM_TEST,  3, -1, 14, TA_OUT_OF_RANGE_END_INDEX,   0, 0, 0, 0},
    { 0, TA_MOM_TEST,  4, 3, 14, TA_OUT_OF_RANGE_END_INDEX,   0, 0, 0, 0},
+#endif
+
+   { 1, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS,      0, -0.50,  14,  252-14 }, /* First Value */
+   { 0, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS,      1, -2.00,  14,  252-14 },
+   { 0, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS,      2, -5.22,  14,  252-14 },
+   { 0, TA_MOM_TEST, 0, 251, 14, TA_SUCCESS, 252-15, -1.13,  14,  252-14 },  /* Last Value */
 
    /* No output value. */
    { 0, TA_MOM_TEST, 1, 1,  14, TA_SUCCESS, 0, 0, 0, 0},
@@ -179,38 +203,65 @@ static TA_Test tableTest[] =
 
 
    /**********************/
-   /*     ROCR TEST      */
+   /*     ROCR TEST   */
    /**********************/
-   { 1, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS,      0, 99.4536,  14,  252-14 }, /* First Value */
-   { 0, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS,      1, 97.8906,  14,  252-14 },
-   { 0, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS,      2, 94.4689,  14,  252-14 },
-   { 0, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS, 252-15, 98.9633,  14,  252-14 },  /* Last Value */
+   { 1, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS,      0, 0.994536,  14,  252-14 }, /* First Value */
+   { 0, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS,      1, 0.978906,  14,  252-14 },
+   { 0, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS,      2, 0.944689,  14,  252-14 },
+   { 0, TA_ROCR_TEST, 0, 251, 14, TA_SUCCESS, 252-15, 0.989633,  14,  252-14 },  /* Last Value */
 
    /* No output value. */
    { 0, TA_ROCR_TEST, 1, 1,  14, TA_SUCCESS, 0, 0, 0, 0},
 
    /* One value tests. */
-   { 0, TA_ROCR_TEST, 14,  14, 14, TA_SUCCESS, 0, 99.4536,     14, 1},
+   { 0, TA_ROCR_TEST, 14,  14, 14, TA_SUCCESS, 0, 0.994536,     14, 1},
 
    /* Index too low test. */
-   { 0, TA_ROCR_TEST, 0,  15, 14, TA_SUCCESS, 0, 99.4536,     14, 2},
-   { 0, TA_ROCR_TEST, 1,  15, 14, TA_SUCCESS, 0, 99.4536,     14, 2},
-   { 0, TA_ROCR_TEST, 2,  16, 14, TA_SUCCESS, 0, 99.4536,     14, 3},
-   { 0, TA_ROCR_TEST, 2,  16, 14, TA_SUCCESS, 1, 97.8906,     14, 3},
-   { 0, TA_ROCR_TEST, 2,  16, 14, TA_SUCCESS, 2, 94.4689,     14, 3},
-   { 0, TA_ROCR_TEST, 0,  14, 14, TA_SUCCESS, 0, 99.4536,     14, 1},
-   { 0, TA_ROCR_TEST, 0,  13, 14, TA_SUCCESS, 0, 99.4536,     14, 0},
+   { 0, TA_ROCR_TEST, 0,  15, 14, TA_SUCCESS, 0, 0.994536,     14, 2},
+   { 0, TA_ROCR_TEST, 1,  15, 14, TA_SUCCESS, 0, 0.994536,     14, 2},
+   { 0, TA_ROCR_TEST, 2,  16, 14, TA_SUCCESS, 0, 0.994536,     14, 3},
+   { 0, TA_ROCR_TEST, 2,  16, 14, TA_SUCCESS, 1, 0.978906,     14, 3},
+   { 0, TA_ROCR_TEST, 2,  16, 14, TA_SUCCESS, 2, 0.944689,     14, 3},
+   { 0, TA_ROCR_TEST, 0,  14, 14, TA_SUCCESS, 0, 0.994536,     14, 1},
+   { 0, TA_ROCR_TEST, 0,  13, 14, TA_SUCCESS, 0, 0.994536,     14, 0},
 
    /* Middle of data test. */
-   { 0, TA_ROCR_TEST, 20,  21, 14, TA_SUCCESS, 0, 95.5096,    20, 2 },
-   { 0, TA_ROCR_TEST, 20,  21, 14, TA_SUCCESS, 1, 94.4744,    20, 2 }
+   { 0, TA_ROCR_TEST, 20,  21, 14, TA_SUCCESS, 0, 0.955096,    20, 2 },
+   { 0, TA_ROCR_TEST, 20,  21, 14, TA_SUCCESS, 1, 0.944744,    20, 2 },
+
+   /**********************/
+   /*     ROCR100 TEST   */
+   /**********************/
+   { 1, TA_ROCR100_TEST, 0, 251, 14, TA_SUCCESS,      0, 99.4536,  14,  252-14 }, /* First Value */
+   { 0, TA_ROCR100_TEST, 0, 251, 14, TA_SUCCESS,      1, 97.8906,  14,  252-14 },
+   { 0, TA_ROCR100_TEST, 0, 251, 14, TA_SUCCESS,      2, 94.4689,  14,  252-14 },
+   { 0, TA_ROCR100_TEST, 0, 251, 14, TA_SUCCESS, 252-15, 98.9633,  14,  252-14 },  /* Last Value */
+
+   /* No output value. */
+   { 0, TA_ROCR100_TEST, 1, 1,  14, TA_SUCCESS, 0, 0, 0, 0},
+
+   /* One value tests. */
+   { 0, TA_ROCR100_TEST, 14,  14, 14, TA_SUCCESS, 0, 99.4536,     14, 1},
+
+   /* Index too low test. */
+   { 0, TA_ROCR100_TEST, 0,  15, 14, TA_SUCCESS, 0, 99.4536,     14, 2},
+   { 0, TA_ROCR100_TEST, 1,  15, 14, TA_SUCCESS, 0, 99.4536,     14, 2},
+   { 0, TA_ROCR100_TEST, 2,  16, 14, TA_SUCCESS, 0, 99.4536,     14, 3},
+   { 0, TA_ROCR100_TEST, 2,  16, 14, TA_SUCCESS, 1, 97.8906,     14, 3},
+   { 0, TA_ROCR100_TEST, 2,  16, 14, TA_SUCCESS, 2, 94.4689,     14, 3},
+   { 0, TA_ROCR100_TEST, 0,  14, 14, TA_SUCCESS, 0, 99.4536,     14, 1},
+   { 0, TA_ROCR100_TEST, 0,  13, 14, TA_SUCCESS, 0, 99.4536,     14, 0},
+
+   /* Middle of data test. */
+   { 0, TA_ROCR100_TEST, 20,  21, 14, TA_SUCCESS, 0, 95.5096,    20, 2 },
+   { 0, TA_ROCR100_TEST, 20,  21, 14, TA_SUCCESS, 1, 94.4744,    20, 2 }
 
 };
 
 #define NB_TEST (sizeof(tableTest)/sizeof(TA_Test))
 
 /**** Global functions definitions.   ****/
-ErrorNumber test_func_mom_roc( TA_Libc *libHandle, TA_History *history )
+ErrorNumber test_func_mom_roc( TA_History *history )
 {
    unsigned int i;
    ErrorNumber retValue;
@@ -224,7 +275,7 @@ ErrorNumber test_func_mom_roc( TA_Libc *libHandle, TA_History *history )
          return TA_TESTUTIL_TFRR_BAD_PARAM;
       }
 
-      retValue = do_test( libHandle, history, &tableTest[i] );
+      retValue = do_test( history, &tableTest[i] );
       if( retValue != 0 )
       {
          printf( "%s Failed Test #%d (Code=%d)\n", __FILE__,
@@ -238,7 +289,7 @@ ErrorNumber test_func_mom_roc( TA_Libc *libHandle, TA_History *history )
 }
 
 /**** Local functions definitions.     ****/
-static TA_RetCode rangeTestFunction( TA_Libc *libHandle, 
+static TA_RetCode rangeTestFunction( 
                               TA_Integer startIdx,
                               TA_Integer endIdx,
                               TA_Real *outputBuffer,
@@ -254,10 +305,10 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
    (void)outputNb;
   
    testParam = (TA_RangeTestParam *)opaqueData;   
-
-   if( testParam->test->theFunction == TA_MOM_TEST )
+   switch( testParam->test->theFunction )
    {
-      retCode = TA_MOM( libHandle,
+   case TA_MOM_TEST:
+      retCode = TA_MOM(
                         startIdx,
                         endIdx,
                         testParam->close,
@@ -267,10 +318,9 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
                         outputBuffer );
 
       *lookback = TA_MOM_Lookback(testParam->test->optInTimePeriod_0 );
-   }
-   else if( testParam->test->theFunction == TA_ROC_TEST )
-   {
-      retCode = TA_ROC( libHandle,
+      break;
+   case TA_ROC_TEST:
+      retCode = TA_ROC(
                         startIdx,
                         endIdx,
                         testParam->close,
@@ -279,10 +329,9 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
                         outNbElement,
                         outputBuffer );
       *lookback = TA_ROC_Lookback(testParam->test->optInTimePeriod_0 );
-   }
-   else if( testParam->test->theFunction == TA_ROCR_TEST )
-   {
-      retCode = TA_ROCR( libHandle,
+      break;
+   case TA_ROCR_TEST:
+      retCode = TA_ROCR(
                          startIdx,
                          endIdx,
                          testParam->close,
@@ -291,15 +340,37 @@ static TA_RetCode rangeTestFunction( TA_Libc *libHandle,
                          outNbElement,
                          outputBuffer );
       *lookback = TA_ROCR_Lookback(testParam->test->optInTimePeriod_0 );
+      break;
+   case TA_ROCR100_TEST:
+      retCode = TA_ROCR100(
+                            startIdx,
+                            endIdx,
+                            testParam->close,
+                            testParam->test->optInTimePeriod_0,                         
+                            outBegIdx,
+                            outNbElement,
+                            outputBuffer );
+      *lookback = TA_ROCR100_Lookback(testParam->test->optInTimePeriod_0 );
+      break;
+   case TA_ROCP_TEST:
+      retCode = TA_ROCP(
+                         startIdx,
+                         endIdx,
+                         testParam->close,
+                         testParam->test->optInTimePeriod_0,                         
+                         outBegIdx,
+                         outNbElement,
+                         outputBuffer );
+      *lookback = TA_ROCP_Lookback(testParam->test->optInTimePeriod_0 );
+      break;
+   default:
+      retCode = TA_INTERNAL_ERROR(130);
    }
-   else
-      retCode = TA_UNKNOWN_ERR;
 
    return retCode;
 }
 
-static ErrorNumber do_test( TA_Libc *libHandle,
-                            const TA_History *history,
+static ErrorNumber do_test( const TA_History *history,
                             const TA_Test *test )
 {
    TA_RetCode retCode;
@@ -318,9 +389,10 @@ static ErrorNumber do_test( TA_Libc *libHandle,
    CLEAR_EXPECTED_VALUE(0);
 
    /* Make a simple first call. */
-   if( test->theFunction == TA_MOM_TEST )
+   switch( test->theFunction )
    {
-      retCode = TA_MOM( libHandle,
+   case TA_MOM_TEST:
+      retCode = TA_MOM(
                         test->startIdx,
                         test->endIdx,
                         gBuffer[0].in,
@@ -328,10 +400,10 @@ static ErrorNumber do_test( TA_Libc *libHandle,
                         &outBegIdx,
                         &outNbElement,
                         gBuffer[0].out0 );
-   }
-   else if( test->theFunction == TA_ROC_TEST )
-   {
-      retCode = TA_ROC( libHandle,
+      break;
+
+   case TA_ROC_TEST:
+      retCode = TA_ROC(
                         test->startIdx,
                         test->endIdx,
                         gBuffer[0].in,
@@ -339,10 +411,9 @@ static ErrorNumber do_test( TA_Libc *libHandle,
                         &outBegIdx,
                         &outNbElement,
                         gBuffer[0].out0 );
-   }
-   else if( test->theFunction == TA_ROCR_TEST )
-   {
-      retCode = TA_ROCR( libHandle,
+      break;
+   case TA_ROCR_TEST:
+      retCode = TA_ROCR(
                          test->startIdx,
                          test->endIdx,
                          gBuffer[0].in,
@@ -350,6 +421,31 @@ static ErrorNumber do_test( TA_Libc *libHandle,
                          &outBegIdx,
                          &outNbElement,
                          gBuffer[0].out0 );
+      break;
+   case TA_ROCR100_TEST:
+      retCode = TA_ROCR100(
+                            test->startIdx,
+                            test->endIdx,
+                            gBuffer[0].in,
+                            test->optInTimePeriod_0,                         
+                            &outBegIdx,
+                            &outNbElement,
+                            gBuffer[0].out0 );
+      break;
+
+   case TA_ROCP_TEST:
+      retCode = TA_ROCP(
+                         test->startIdx,
+                         test->endIdx,
+                         gBuffer[0].in,
+                         test->optInTimePeriod_0,                         
+                         &outBegIdx,
+                         &outNbElement,
+                         gBuffer[0].out0 );
+      break;
+
+   default:
+      retCode = TA_BAD_PARAM;
    }
 
    errNb = checkDataSame( gBuffer[0].in, history->close,history->nbBars );
@@ -364,9 +460,10 @@ static ErrorNumber do_test( TA_Libc *libHandle,
     * same buffer.
     */
    CLEAR_EXPECTED_VALUE(0);
-   if( test->theFunction == TA_MOM_TEST )
+   switch( test->theFunction )
    {
-      retCode = TA_MOM( libHandle,
+   case TA_MOM_TEST:
+      retCode = TA_MOM(
                         test->startIdx,
                         test->endIdx,
                         gBuffer[1].in,
@@ -374,10 +471,9 @@ static ErrorNumber do_test( TA_Libc *libHandle,
                         &outBegIdx,
                         &outNbElement,
                         gBuffer[1].in );
-   }
-   else if( test->theFunction == TA_ROC_TEST )
-   {
-      retCode = TA_ROC( libHandle,
+      break;
+   case TA_ROC_TEST:
+      retCode = TA_ROC(
                         test->startIdx,
                         test->endIdx,
                         gBuffer[1].in,
@@ -385,10 +481,9 @@ static ErrorNumber do_test( TA_Libc *libHandle,
                         &outBegIdx,
                         &outNbElement,
                         gBuffer[1].in );
-   }
-   else if( test->theFunction == TA_ROCR_TEST )
-   {
-      retCode = TA_ROCR( libHandle,
+      break;
+   case TA_ROCR_TEST:
+      retCode = TA_ROCR(
                          test->startIdx,
                          test->endIdx,
                          gBuffer[1].in,
@@ -396,6 +491,27 @@ static ErrorNumber do_test( TA_Libc *libHandle,
                          &outBegIdx,
                          &outNbElement,
                          gBuffer[1].in );
+      break;
+   case TA_ROCR100_TEST:
+      retCode = TA_ROCR100(
+                            test->startIdx,
+                            test->endIdx,
+                            gBuffer[1].in,
+                            test->optInTimePeriod_0,                         
+                            &outBegIdx,
+                            &outNbElement,
+                            gBuffer[1].in );
+      break;
+   case TA_ROCP_TEST:
+      retCode = TA_ROCP(
+                         test->startIdx,
+                         test->endIdx,
+                         gBuffer[1].in,
+                         test->optInTimePeriod_0,                         
+                         &outBegIdx,
+                         &outNbElement,
+                         gBuffer[1].in );
+      break;
    }
 
    /* The previous call should have the same output as this call.
@@ -420,10 +536,10 @@ static ErrorNumber do_test( TA_Libc *libHandle,
 
    if( test->doRangeTestFlag )
    {
-      errNb = doRangeTest( libHandle,
+      errNb = doRangeTest(
                            rangeTestFunction, 
                            TA_FUNC_UNST_NONE,
-                           (void *)&testParam, 1 );
+                           (void *)&testParam, 1, 0 );
       if( errNb != TA_TEST_PASS )
          return errNb;
    }

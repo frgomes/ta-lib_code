@@ -6,7 +6,11 @@ See http://ta-lib.org in the documentation section.
 
 What's this version? What's new?
 ================================
-See CHANGELOG.TXT file.
+See CHANGELOG.TXT and HISTORY.TXT
+
+How to use TA-Lib with Excel?
+=============================
+See "ta-lib\excel\README.TXT"
 
 How to build the TA-LIB C Library?
 ==================================
@@ -21,9 +25,8 @@ All executable are created in ta-lib/c/bin
 
 How to link to the TA-LIB?
 ==========================
-Generally, you just need to link
-to the static library created 
-in ta-lib/c/lib
+Generally, you just need to link to the static
+library created in ta-lib/c/lib
 
 Your application code just need to
 include ta-lib/c/include/ta-libc.h

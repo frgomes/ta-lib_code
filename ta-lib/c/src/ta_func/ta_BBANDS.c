@@ -36,6 +36,7 @@
  *  Initial  Name/description
  *  -------------------------------------------------------------------
  *  MF       Mario Fortier
+ *  JV       Jesus Viver <324122@cienz.unizar.es>
  *
  *
  * Change history:
@@ -43,6 +44,7 @@
  *  MMDDYY BY   Description
  *  -------------------------------------------------------------------
  *  112400 MF   Template creation.
+ *  010503 MF   Fix to always use SMA for the STDDEV (Thanks to JV). 
  *
  */
 
@@ -62,11 +64,10 @@
    #include "ta_utility.h"
 #endif
 
-int TA_BBANDS_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
+int TA_BBANDS_Lookback( TA_Integer    optInTimePeriod_0, /* From 2 to TA_INTEGER_MAX */
                         TA_Real       optInNbDevUp_1, /* From TA_REAL_MIN to TA_REAL_MAX */
                         TA_Real       optInNbDevDn_2, /* From TA_REAL_MIN to TA_REAL_MAX */
-                        TA_Integer    optInMethod_3,
-                        TA_Integer    optInCompatibility_4 ) 
+                        TA_MAType     optInMAType_3 ) 
 /**** END GENCODE SECTION 1 - DO NOT DELETE THIS LINE ****/
 {
    /* insert lookback code here. */
@@ -74,9 +75,7 @@ int TA_BBANDS_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER
    (void)optInNbDevDn_2;
 
    /* The lookback is driven by the middle band moving average. */
-   return TA_MA_Lookback( optInTimePeriod_0,
-                          optInMethod_3,
-                          optInCompatibility_4 );
+   return TA_MA_Lookback( optInTimePeriod_0, optInMAType_3 );                          
 }
 
 /**** START GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
@@ -88,7 +87,7 @@ int TA_BBANDS_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER
  * 
  * Optional Parameters
  * -------------------
- * optInTimePeriod_0:(From 1 to TA_INTEGER_MAX)
+ * optInTimePeriod_0:(From 2 to TA_INTEGER_MAX)
  *    Number of period
  * 
  * optInNbDevUp_1:(From TA_REAL_MIN to TA_REAL_MAX)
@@ -97,24 +96,19 @@ int TA_BBANDS_Lookback( TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER
  * optInNbDevDn_2:(From TA_REAL_MIN to TA_REAL_MAX)
  *    Deviation multiplier for lower band
  * 
- * optInMethod_3:
- *    Define technique used for calculation
- * 
- * optInCompatibility_4:
- *    Make function compatible to some software
+ * optInMAType_3:
+ *    Type of Moving Average
  * 
  * 
  */
 
-TA_RetCode TA_BBANDS( TA_Libc      *libHandle,
-                      TA_Integer    startIdx,
+TA_RetCode TA_BBANDS( TA_Integer    startIdx,
                       TA_Integer    endIdx,
                       const TA_Real inReal_0[],
-                      TA_Integer    optInTimePeriod_0, /* From 1 to TA_INTEGER_MAX */
+                      TA_Integer    optInTimePeriod_0, /* From 2 to TA_INTEGER_MAX */
                       TA_Real       optInNbDevUp_1, /* From TA_REAL_MIN to TA_REAL_MAX */
                       TA_Real       optInNbDevDn_2, /* From TA_REAL_MIN to TA_REAL_MAX */
-                      TA_Integer    optInMethod_3,
-                      TA_Integer    optInCompatibility_4,
+                      TA_MAType     optInMAType_3,
                       TA_Integer   *outBegIdx,
                       TA_Integer   *outNbElement,
                       TA_Real       outRealUpperBand_0[],
@@ -131,8 +125,6 @@ TA_RetCode TA_BBANDS( TA_Libc      *libHandle,
 
 /**** START GENCODE SECTION 3 - DO NOT DELETE THIS LINE ****/
 
-   (void)libHandle; /* Get ride of warning if unused. */
-
 #ifndef TA_FUNC_NO_RANGE_CHECK
 
    /* Validate the requested output range. */
@@ -144,9 +136,9 @@ TA_RetCode TA_BBANDS( TA_Libc      *libHandle,
    /* Validate the parameters. */
    if( !inReal_0 ) return TA_BAD_PARAM;
    /* min/max are checked for optInTimePeriod_0. */
-   if( optInTimePeriod_0 == TA_INTEGER_DEFAULT )
+   if( (TA_Integer)optInTimePeriod_0 == TA_INTEGER_DEFAULT )
       optInTimePeriod_0 = 5;
-   else if( (optInTimePeriod_0 < 1) || (optInTimePeriod_0 > 2147483647) )
+   else if( ((TA_Integer)optInTimePeriod_0 < 2) || ((TA_Integer)optInTimePeriod_0 > 2147483647) )
       return TA_BAD_PARAM;
 
    if( optInNbDevUp_1 == TA_REAL_DEFAULT )
@@ -159,14 +151,9 @@ TA_RetCode TA_BBANDS( TA_Libc      *libHandle,
    else if( (optInNbDevDn_2 < -3.000000e+37) || (optInNbDevDn_2 > 3.000000e+37) )
       return TA_BAD_PARAM;
 
-   if( optInMethod_3 == TA_INTEGER_DEFAULT )
-      optInMethod_3 = 0;
-   else if( (optInMethod_3 < 0) || (optInMethod_3 > 4) )
-      return TA_BAD_PARAM;
-
-   if( optInCompatibility_4 == TA_INTEGER_DEFAULT )
-      optInCompatibility_4 = 0;
-   else if( (optInCompatibility_4 < 0) || (optInCompatibility_4 > 1) )
+   if( (TA_Integer)optInMAType_3 == TA_INTEGER_DEFAULT )
+      optInMAType_3 = 0;
+   else if( ((TA_Integer)optInMAType_3 < 0) || ((TA_Integer)optInMAType_3 > 8) )
       return TA_BAD_PARAM;
 
    if( outRealUpperBand_0 == NULL )
@@ -223,12 +210,10 @@ TA_RetCode TA_BBANDS( TA_Libc      *libHandle,
     * The other two bands will simply add/substract the
     * standard deviation from this middle band.
     */
-   retCode = TA_MA( libHandle,
-                    startIdx, endIdx,
+   retCode = TA_MA( startIdx, endIdx,
                     inReal_0,
                     optInTimePeriod_0,
-                    optInMethod_3,
-                    optInCompatibility_4,
+                    optInMAType_3,
                     outBegIdx, outNbElement, tempBuffer1 );
 
    if( (retCode != TA_SUCCESS) || (*outNbElement == 0) )
@@ -237,31 +222,20 @@ TA_RetCode TA_BBANDS( TA_Libc      *libHandle,
       return retCode;
    }
 
-   /* Calculate the standard deviation into the temporary buffer
-    * The result is put in tempBuffer2.
-    */
-   if( optInCompatibility_4 == TA_BBANDS_CLASSIC )
+   /* Calculate the standard deviation into tempBuffer2. */
+   if( optInMAType_3 == TA_MAType_SMA )
    {
-      /* The classic approach is not always using the true standard
-       * variation.
-       * - in the case that the MA method is a SMA it will
-       *   be a true standard deviation.
-       * - in the case that the MA method is not a SMA, the
-       *   part which is being a SMA in the variance calculation
-       *   is also replaced by the choosen MA method.
-       */            
+      /* A small speed optimization by re-using the
+       * already calculated SMA.
+       */
        TA_INT_stddev_using_precalc_ma( inReal_0,
                                        tempBuffer1, *outBegIdx, *outNbElement,
                                        optInTimePeriod_0, tempBuffer2 );
    }
    else
    {
-      /* Other implementation (Metastock here) always use the SMA
-       * in the variance calculation regardless the MA method
-       * choosen for the middle band.
-       */
-      retCode = TA_STDDEV( libHandle,
-                           *outBegIdx, endIdx, inReal_0,
+      /* Calculate the Standard Deviation */
+      retCode = TA_STDDEV( *outBegIdx, endIdx, inReal_0,
                            optInTimePeriod_0, 1.0,
                            outBegIdx, outNbElement, tempBuffer2 );
 

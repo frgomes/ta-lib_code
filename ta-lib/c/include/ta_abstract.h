@@ -96,7 +96,7 @@ extern "C" {
  *   TA_RetCode retCode;
  *   int i;
  *
- *   retCode = TA_GroupTableAlloc( libHandle, &table );
+ *   retCode = TA_GroupTableAlloc( &table );
  *
  *   if( retCode == TA_SUCCESS )
  *   {
@@ -106,7 +106,7 @@ extern "C" {
  *      TA_GroupTableFree( table );
  *   }
  */
-TA_RetCode TA_GroupTableAlloc( TA_Libc *libHandle, TA_StringTable **table );
+TA_RetCode TA_GroupTableAlloc( TA_StringTable **table );
 TA_RetCode TA_GroupTableFree ( TA_StringTable *table );
 
 /* The following functions are used to obtain the name of all the
@@ -127,8 +127,7 @@ TA_RetCode TA_GroupTableFree ( TA_StringTable *table );
  *   TA_RetCode retCode;
  *   int i;
  *
- *   retCode = TA_FuncTableAlloc( libHandle,
- *                                "Market Strength",
+ *   retCode = TA_FuncTableAlloc( "Market Strength",
  *                                &table );
  *
  *   if( retCode == TA_SUCCESS )
@@ -139,9 +138,7 @@ TA_RetCode TA_GroupTableFree ( TA_StringTable *table );
  *      TA_FuncTableFree( table );
  *   }
  */
-TA_RetCode TA_FuncTableAlloc( TA_Libc *libHandle,
-                              const char *group,
-                              TA_StringTable **table );
+TA_RetCode TA_FuncTableAlloc( const char *group, TA_StringTable **table );                              
 TA_RetCode TA_FuncTableFree ( TA_StringTable *table );
 
 /* Using the name, you can obtain an handle unique to this function.
@@ -152,8 +149,7 @@ TA_RetCode TA_FuncTableFree ( TA_StringTable *table );
  * the TA_FuncInfo structure (see below).
  */
 typedef unsigned int TA_FuncHandle;
-TA_RetCode TA_GetFuncHandle( TA_Libc *libHandle,
-                             const char *name,
+TA_RetCode TA_GetFuncHandle( const char *name,
                              const TA_FuncHandle **handle );
 
 /* Get some basic information about a function.
@@ -169,7 +165,7 @@ TA_RetCode TA_GetFuncHandle( TA_Libc *libHandle,
  *   TA_FuncHandle *handle;
  *   const TA_FuncInfo *theInfo;
  *
- *   retCode = TA_GetFuncHandle( libHandle, "MA", &handle );
+ *   retCode = TA_GetFuncHandle( "MA", &handle );
  *
  *   if( retCode == TA_SUCCESS )
  *   {
@@ -220,21 +216,19 @@ TA_RetCode TA_GetFuncInfo( const TA_FuncHandle *handle,
  * Example:
  *  This code will print the group and name of all available functions.
  *
- *  void printFuncInfo( TA_Libc *libHandle,
- *                      const TA_FuncInfo *funcInfo,
- *                      void *opaqueData )
+ *  void printFuncInfo( const TA_FuncInfo *funcInfo, void *opaqueData )
  *  {
  *     printf( "Group=%s Name=%s\n", funcInfo->group, funcInfo->name );
  *  }
  *
- *  void displayListOfTAFunctions( TA_Libc *libHandle )
+ *  void displayListOfTAFunctions( void )
  *  {
- *     TA_ForEachFunc( libHandle, printFuncInfo, NULL );
+ *     TA_ForEachFunc( printFuncInfo, NULL );
  *  }
  */
-typedef void (*TA_CallForEachFunc)(TA_Libc *libHandle, const TA_FuncInfo *funcInfo, void *opaqueData );
+typedef void (*TA_CallForEachFunc)(const TA_FuncInfo *funcInfo, void *opaqueData );
 
-TA_RetCode TA_ForEachFunc( TA_Libc *libHandle, TA_CallForEachFunc functionToCall, void *opaqueData );
+TA_RetCode TA_ForEachFunc( TA_CallForEachFunc functionToCall, void *opaqueData );
 
 /* The next section includes the data structures and function allowing to
  * proceed with the call of a Tech. Analysis function.
@@ -317,8 +311,7 @@ typedef enum
 typedef enum
 {
    TA_Output_Real,
-   TA_Output_Integer,
-   TA_Output_Draw
+   TA_Output_Integer
 } TA_OutputParameterType;
 
 /* When the input is a TA_Input_Price, the following 
@@ -373,49 +366,6 @@ typedef int TA_OutputFlags;
 #define TA_OUT_NORM_LINE  0x00000200
 #define TA_OUT_THICK_LINE 0x00000400
 
-
-/* TA_Coordinates/TA_Draw functionality can be ignored by most user. It is
- * significative only if you care about visual output and line study.
- */
-typedef struct
-{
-   /* 'x' is the index within the input provided to the TA function.
-    * (Example: if there is 128 days provided and 'x' is 10, the
-    *           vertical position is at the 10th day).
-    */
-
-   /* 'y' values are in the same scale as the data used as input
-    * to the TA function.
-    */
-   TA_Integer x;
-   TA_Real    y;
-} TA_Coordinate;
-
-typedef int TA_DrawFlags;
-/* All these flags can be combined. */
-#define TA_DRAW_LINE_P1P2     0x00000001 /* Draw a line from p1 to p2. */
-#define TA_DRAW_LINE_P1P2P3   0x00000003 /* Draw a line from p1 to p2 to p3 */
-#define TA_DRAW_LINE_P1P2P3P4 0x00000007 /* Draw a line from p1 to p2 to p3 to p4 */
-#define TA_DRAW_POLYGON       0x00000008 /* Connect p1,p2,p3,p4 together */
-
-#define TA_DRAW_LINE_HORIZ_P1 0x00000010 /* p1.y determine the position. */
-#define TA_DRAW_LINE_HORIZ_P2 0x00000020 /* p2.y determine the position. */
-#define TA_DRAW_LINE_HORIZ_P3 0x00000040 /* p3.y determine the position. */
-#define TA_DRAW_LINE_HORIZ_P4 0x00000080 /* p4.y determine the position. */
-
-#define TA_DRAW_LINE_VERT_P1  0x00000100 /* p1.x determine the position. */
-#define TA_DRAW_LINE_VERT_P2  0x00000200 /* p2.x determine the position. */
-#define TA_DRAW_LINE_VERT_P3  0x00000400 /* p3.x determine the position. */
-#define TA_DRAW_LINE_VERT_P4  0x00000800 /* p4.x determine the position. */
-
-typedef struct
-{
-  TA_DrawFlags flags;
-  const TA_Coordinate p1;
-  const TA_Coordinate p2;
-  const TA_Coordinate p3;
-  const TA_Coordinate p4;
-} TA_Draw;
 
 /* The following 3 structures will exist for each input, optional
  * input and output.
@@ -492,10 +442,8 @@ TA_RetCode TA_SetOutputParameterInfoPtr( const TA_FuncHandle *handle,
                                          unsigned int paramIndex,
                                          const TA_OutputParameterInfo **info );
 
-/* Alloc an array of parameters holder and provides functions to setup
- * these.
- *
- * A TA_ParamHolder will be allocated for each input, opt input and output.
+/* Alloc a structure allowing to build the list of parameters
+ * for doing a call.
  *
  * All input and output parameters must be setup. If not, TA_BAD_PARAM
  * will be returned when TA_CallFunc is called.
@@ -510,26 +458,31 @@ TA_RetCode TA_SetOutputParameterInfoPtr( const TA_FuncHandle *handle,
  * If you provide a wrong parameter value, or wrong type, or wrong pointer etc. the
  * library shall return TA_BAD_PARAM or TA_BAD_OBJECT and not hang.
  */
-typedef unsigned int TA_ParamHolder; /* Implementation hidden. */
+typedef struct
+{
+  /* Implementation is hidden. */
+  void *hiddenData;
+} TA_ParamHolder; 
 
-TA_RetCode TA_ParamHoldersAlloc( TA_Libc *libHandle,
-                                 const TA_FuncHandle *handle,
-                                 TA_ParamHolder **newInputParams,
-                                 TA_ParamHolder **newOptInputParams,
-                                 TA_ParamHolder **newOutputParams );
+TA_RetCode TA_ParamHolderAlloc( const TA_FuncHandle *handle,
+                                TA_ParamHolder **allocatedParams );
 
-TA_RetCode TA_ParamHoldersFree( TA_ParamHolder *inputParamsToFree,
-                                TA_ParamHolder *optInputParamsToFree,
-                                TA_ParamHolder *outputParamsToFree );
+TA_RetCode TA_ParamHolderFree( TA_ParamHolder *params );
 
-/* Setup the values of the data input parameters. */
-TA_RetCode TA_SetInputParamIntegerPtr( TA_ParamHolder *param,
+/* Setup the values of the data input parameters. 
+ *
+ * paramIndex is zero for the first input.
+ */
+TA_RetCode TA_SetInputParamIntegerPtr( TA_ParamHolder *params,
+                                       unsigned int paramIndex,
                                        const TA_Integer *value );
 
-TA_RetCode TA_SetInputParamRealPtr( TA_ParamHolder *param,
+TA_RetCode TA_SetInputParamRealPtr( TA_ParamHolder *params,
+                                    unsigned int paramIndex,
                                     const TA_Real *value );
 
-TA_RetCode TA_SetInputParamPricePtr( TA_ParamHolder     *param,
+TA_RetCode TA_SetInputParamPricePtr( TA_ParamHolder *params,
+                                     unsigned int paramIndex,
                                      const TA_Timestamp *timestamp,
                                      const TA_Real      *open,
                                      const TA_Real      *high,
@@ -540,103 +493,46 @@ TA_RetCode TA_SetInputParamPricePtr( TA_ParamHolder     *param,
 
 /* Setup the values of the optional input parameters.
  * If an optional input is not set, a default value will be used.
+ *
+ * paramIndex is zero for the first optional input.
  */
-TA_RetCode TA_SetOptInputParamInteger( TA_ParamHolder *param,
+TA_RetCode TA_SetOptInputParamInteger( TA_ParamHolder *params,
+                                       unsigned int paramIndex,
                                        TA_Integer optInValue );
 
-TA_RetCode TA_SetOptInputParamReal( TA_ParamHolder *param,
+TA_RetCode TA_SetOptInputParamReal( TA_ParamHolder *params,
+                                    unsigned int paramIndex,
                                     TA_Real optInValue );
 
 /* Setup the parameters indicating where to store the output.
  *
  * The caller is responsible to allocate sufficient memory. A safe bet is to
  * always do: nb of output elements  == (endIdx-startIdx+1)
+ *
+ * paramIndex is zero for the first output.
+ *
  */
-TA_RetCode TA_SetOutputParamIntegerPtr( TA_ParamHolder *param,
+TA_RetCode TA_SetOutputParamIntegerPtr( TA_ParamHolder *params,
+                                        unsigned int paramIndex,
                                         TA_Integer     *out );
 
-TA_RetCode TA_SetOutputParamRealPtr( TA_ParamHolder *param,
+TA_RetCode TA_SetOutputParamRealPtr( TA_ParamHolder *params,
+                                     unsigned int paramIndex,
                                      TA_Real        *out );
 
-TA_RetCode TA_SetOutputParamDrawPtr( TA_ParamHolder *param,
-                                     TA_Draw        *out );
-
-/* Finally, call a TA function with the parameters. */
-TA_RetCode TA_CallFunc( const TA_FuncHandle  *handle,
+/* Finally, call the TA function with the parameters. 
+ *
+ * The TA function who is going to be called was specified
+ * when the TA_ParamHolderAlloc was done.
+ */
+TA_RetCode TA_CallFunc( const TA_ParamHolder *params,
                         TA_Integer            startIdx,
                         TA_Integer            endIdx,
                         TA_Integer           *outBegIdx,
-                        TA_Integer           *outNbElement,
-                        const TA_ParamHolder *inputParams,
-                        const TA_ParamHolder *optInputParams,
-                        const TA_ParamHolder *outputParams );
-#if 0
-/***** The following feature is in development ******/
-
-/* All the interface explain up to now is sufficient for implementing
- * a versatile charting software.
- *
- * The next step in functionality is to provide an automated (and consistent)
- * interpretation of a technical analysis function.
- *
- * Personaly, I expect to use this interface for mix and matching similar
- * indicators while doing strategy optimization with a genetic algorithm.
- *
- * The function TA_AnalysisAlloc is called with the same parameter used
- * for a TA_CallFunc. The results of the function is returned in the same way
- * in the output.
- * In fact the following two function calls are equivalent:
- *          TA_CallFunc( handle, params );
- *          TA_AnalysisAlloc( handle, params, NULL, NULL, NULL );
- *
- * The additional parameter of the TA_AnalysisAlloc allows to get a 32 bit
- * to be allocated for each valid output from the TA function.
- * These bits represents conclusions from one or multiple analysis.
- * The same bit have the same signification for all the TA functions. Since not
- * all functions can provides the same type of analysis, the "validMap"
- * indicates which bits are valid.
- *
- * The parameter "requestMap" allows the caller to limit the processing only
- * with the bit it cares. All bit not requested will be always zero.
- */
-typedef enum
-{
-   TA_AG_INPUT_OVERSOLD         = 0x00000001,
-   TA_AG_INPUT_OVERBOUGHT       = 0x00000002,
-
-   TA_AG_INPUT_TRENDING_UP      = 0x00000004,
-   TA_AG_INPUT_TRENDING_DOWN    = 0x00000008,
-
-   TA_AG_PREDICT_INPUT_UP       = 0x00000010,
-   TA_AG_PREDICT_INPUT_DOWN     = 0x00000020,
-
-   TA_AG_DIVERGENCE_WITH_INPUT  = 0x00000040,
-
-   TA_AG_CYCLE_IN_INPUT         = 0x00000080,
-
-   TA_AG_INVALID = -1
-  /* All these flags can be mix with a '|' operator. */
-} TA_AnalysisBitmap;
-
-TA_RetCode TA_AnalysisAlloc( const TA_FuncHandle  *handle,
-                             const TA_ParamHolder *params,
-                             TA_AnalysisBitmap     requestMap,
-                             TA_AnalysisBitmap    *validMap,
-                             TA_AnalysisBitmap   **newAnalysis );
-
-TA_RetCode TA_AnalysisFree( TA_AnalysisBitmap *analysisToBeFreed );
-
-/* If you need to get the 'validMap' for any TA function.
- * Useful for establishing which function apply to your needs before
- * wasting time to call it.
- */
-TA_RetCode TA_AnalysisGetBitmap( const TA_FuncHandle *handle,
-                                 TA_AnalysisBitmap   *validMap );
-#endif
+                        TA_Integer           *outNbElement );
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
